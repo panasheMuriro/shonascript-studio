@@ -1,1 +1,173 @@
 @import "tailwindcss";
+
+
+.shonax-editor {
+  @apply h-screen flex flex-col bg-gray-900;
+}
+
+.shonax-editor.fullscreen {
+  @apply fixed inset-0 z-50;
+}
+
+.editor-toolbar {
+  @apply flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700;
+}
+
+.toolbar-left {
+  @apply flex items-center space-x-4;
+}
+
+.editor-title {
+  @apply flex items-center space-x-2 text-lg font-semibold text-white;
+}
+
+.file-name {
+  @apply text-sm text-gray-400;
+}
+
+.toolbar-center {
+  @apply flex items-center;
+}
+
+.status-indicator {
+  @apply flex items-center space-x-2 px-3 py-1 rounded-full text-sm;
+}
+
+.status-indicator.compiling {
+  @apply bg-blue-900/50 text-blue-300;
+}
+
+.status-indicator.success {
+  @apply bg-green-900/50 text-green-300;
+}
+
+.status-indicator.error {
+  @apply bg-red-900/50 text-red-300;
+}
+
+.icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.toolbar-right {
+  @apply flex items-center space-x-2;
+}
+
+.toolbar-btn {
+  @apply p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors;
+}
+
+.editor-content {
+  @apply flex-1 overflow-hidden;
+}
+
+.editor-panel {
+  @apply h-full bg-gray-900;
+}
+
+.preview-panel {
+  @apply h-full flex flex-col bg-gray-800;
+}
+
+.preview-tabs {
+  @apply flex bg-gray-900 border-b border-gray-700;
+}
+
+.tab {
+  @apply flex items-center space-x-2 px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors;
+}
+
+.tab.active {
+  @apply text-white bg-gray-800 border-b-2 border-blue-500;
+}
+
+.preview-content {
+  @apply flex-1 relative overflow-hidden;
+}
+
+.preview-iframe {
+  @apply w-full h-full border-0;
+}
+
+.compiled-code {
+  @apply h-full flex flex-col;
+}
+
+.code-actions {
+  @apply flex space-x-2 p-2 bg-gray-900 border-b border-gray-700;
+}
+
+.action-btn {
+  @apply flex items-center space-x-1 px-3 py-1 text-xs text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded transition-colors;
+}
+
+.error-panel {
+  @apply absolute bottom-0 left-0 right-0 bg-red-900/90 border-t border-red-700 max-h-48 overflow-y-auto;
+}
+
+.error-header {
+  @apply flex items-center space-x-2 px-4 py-2 text-red-200 font-semibold;
+}
+
+.error-list {
+  @apply px-4 pb-2;
+}
+
+.error-item {
+  @apply py-1 text-sm text-red-300 font-mono;
+}
+
+.settings-modal {
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+}
+
+.settings-content {
+  @apply bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full;
+}
+
+.settings-content h3 {
+  @apply text-lg font-semibold text-white mb-4;
+}
+
+.setting-item {
+  @apply mb-4;
+}
+
+.setting-item label {
+  @apply block text-sm text-gray-300 mb-2;
+}
+
+.setting-item select {
+  @apply w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none;
+}
+
+.close-btn {
+  @apply mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors;
+}
+
+/* Split Pane Customization */
+.Resizer {
+  @apply bg-gray-700 opacity-20 z-10 box-border bg-clip-padding;
+}
+
+.Resizer:hover {
+  @apply opacity-100 transition-opacity duration-200;
+}
+
+.Resizer.horizontal {
+  @apply h-3 -my-1.5 border-t-2 border-b-2 border-transparent cursor-row-resize w-full;
+}
+
+.Resizer.vertical {
+  @apply w-3 -mx-1.5 border-l-2 border-r-2 border-transparent cursor-col-resize;
+}
+
+.Resizer.vertical:hover,
+.Resizer.horizontal:hover {
+  @apply border-blue-500;
+}
