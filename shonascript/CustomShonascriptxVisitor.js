@@ -237,230 +237,9 @@ _getPropertyRefString(propertyRefCtx) {
     =            PROGRAM (ENTRY POINT)            =
     ============================================= */
 
-//     visitProgram(ctx) {
-//          const input = ctx.start.getInputStream();
-//     const fullText = input.getText(0, input.size - 1);
-
-      
-
-//     console.log('DEBUG PROGRAM: Full input text:');
-//     console.log(fullText);
-//     console.log('DEBUG PROGRAM: Number of children:', ctx.children?.length);
-
-//     if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
-//         throw new Error('style elements cannot be assigned to variables');
-//     }
-
-//     this.computedCode = [];
-
-//     const isComponent = this.target === 'component';
-//     if (isComponent) {
-//         this.parentStack = ['root'];
-//         this.elementCounter = 0;
-//     }
-//     if (this.target === 'node' && this.containsFetch(ctx))
-//         this.inAsyncWrapper = true;
-
-//     const emittedLines = [];
-//     const componentVars = [];
-//     const componentFns = [];
-//     let rootElement = null;
-
-//     for (const child of ctx.children ?? []) {
-//         console.log('DEBUG PROGRAM: Child type:', child.constructor.name);
-//         console.log('DEBUG PROGRAM: Child text:', child.getText ? child.getText() : 'no getText');
-        
-//         if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
-
-//         if (isComponent && child.constructor.name === 'ProgramElementContext') {
-//             console.log('DEBUG PROGRAM: ProgramElementContext found');
-            
-//             if (child.reactiveBlock && child.reactiveBlock()) {
-//                 console.log('DEBUG PROGRAM: Has reactiveBlock');
-//                 this.visit(child.reactiveBlock());
-//                 continue;
-//             }
-
-//             if (child.htmlElement && child.htmlElement()) {
-//                 console.log('DEBUG PROGRAM: Has htmlElement');
-//                 const currentElName = `el${this.elementCounter}`;
-//                 const htmlElCtx = child.htmlElement();
-                
-//                 console.log('DEBUG PROGRAM: htmlElement text:', htmlElCtx.getText());
-                
-//                 if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
-//                     console.log('DEBUG PROGRAM: No tagName function, skipping');
-//                     continue;
-//                 }
-//                 const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
-//                 console.log('DEBUG PROGRAM: Tag name:', tagName);
-
-//                 const code = this.visit(child.htmlElement());
-//                 if (code) emittedLines.push(code);
-
-//                 if (!rootElement && tagName !== 'style') {
-//                     rootElement = currentElName;
-//                 }
-//                 continue;
-//             }
-            
-//             if (child.line && child.line()) {
-//                 console.log('DEBUG PROGRAM: Has line');
-//                 const stmt = child.line().statement?.();
-//                 if (!stmt) continue;
-
-//                 if (stmt.simpleStatement?.()?.assignment?.()) {
-//                     const code = this.visit(stmt);
-//                     if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-//                     continue;
-//                 }
-                
-//                 if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
-//                     const code = this.visit(stmt);
-//                     if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-//                     continue;
-//                 }
-                
-//                 if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-//                     const code = this.visit(stmt.compoundStatement().functionDefinition());
-//                     if (code.trim()) componentFns.push(code);
-//                     continue;
-//                 }
-//             }
-//         }
-
-//         const code = this.visit(child);
-//         console.log('DEBUG PROGRAM: Visited child, code:', code);
-//         if (code) emittedLines.push(code);
-//     }
-    
-
-//     const bodyCode = emittedLines.filter(Boolean).join('\n');
-
-//         /* ========== 3. helper snippets ========== */
-//         const helpers = `
-// function $$createText(data){return document.createTextNode(data);}
-// function $$listen(node,e,h){node.addEventListener(e,h);}
-// function $$setAttribute(n,a,v){
-//     if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
-
-//     else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
-//     else{n.setAttribute(a,v);}
-// }const _effects = [];
-// function _runEffects(){ for(const f of _effects) f();}`
-
-
-//         /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
-//         if (isComponent) {
-//             const destructure = this.componentProps.length
-//                 ? `const { ${this.componentProps.join(', ')} } = props;`
-//                 : '';
-//             const varDecls = componentVars.length
-//                 ? componentVars.map(l => '    ' + l + ';').join('\n')
-//                 : '';
-//             const fnDecls = componentFns.length
-//                 ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
-//                 : '';
-
-//             // Indent the DOM creation logic to fit inside the _render function
-//             const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
-
-//             return `${helpers}
-
-// export default function ${this.componentName}(props = {}) {
-
-//     const root = document.createElement('div');
-
-//     ${destructure}
-// ${varDecls}
-// ${fnDecls}
-
-
-//     function _runComputations() {
-// ${this.computedCode.map(line => '        ' + line).join('\n')}
-//     }
-
-//     function _render() {
-
-//         _runComputations();
-
-//         root.innerHTML = '';
-
-// ${indentedBody}
-
-//         if (${rootElement}) {
-//             root.appendChild(${rootElement});
-//         }
-//     }
-
-//     const _effects = [_render];
-//     function _runEffects() {
-//         for (const f of _effects) f();
-//     }
-
-//     _render(); // Initial render call.
-
-//     return root;
-// }`;
-//         }
-
-//         /* ========== 5. REGULAR (SCRIPT) OUTPUT (UNCHANGED) ========== */
-//         // This part ensures your non-DOM `.shona` files are not affected.
-//         let header = '';
-//         if (this.target === 'node') {
-//             for (const [mod, symbols] of this.imports)
-//                 header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
-//             if (this.imports.size) header += '\n';
-//             if (this.promptInjected) header +=
-//                 'import promptSync from "prompt-sync";\n' +
-//                 'const prompt = promptSync({ sigint: true });\n\n';
-//         }
-
-//         const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
-//         if (this.inAsyncWrapper && globals.length)
-//             header += `let ${globals.join(', ')};\n\n`;
-
-//         if (this.inAsyncWrapper) {
-//             const wrapper = `(async () => {\n${bodyCode}\n})();\n`;
-//             const exports = globals.length && this.target === 'node'
-//                 ? `export { ${globals.join(', ')} };\n` : '';
-//             return header + helpers + '\n\n' + wrapper + exports;
-//         }
-
-//         if (globals.length && this.target === 'node')
-//             header += `export { ${globals.join(', ')} };\n\n`;
-
-//         return header + helpers + '\n\n(function(){\n' + bodyCode + '\n})();';
-//     }
-
-    // visitPrimitiveFilter(ctx) {
-    //     const varName = ctx.ID().getText();
-    //     const op = ctx.comparisonOperator().getText();
-    //     const value = this.visit(ctx.expression());
-
-    //     let comparison;
-    //     // INVERTED logic - "bvisa" means remove
-    //     switch (op) {
-    //         case '>': comparison = `x <= ${value}`; break;
-    //         case '<': comparison = `x >= ${value}`; break;
-    //         case '>=': comparison = `x < ${value}`; break;
-    //         case '<=': comparison = `x > ${value}`; break;
-    //         case '==': comparison = `x !== ${value}`; break;
-    //         case '!=': comparison = `x === ${value}`; break;
-    //         default: comparison = `x !== ${value}`;
-    //     }
-
-    //     return `${varName} = ${varName}.filter(x => ${comparison})`;
-    // }
-
-    // Replace the visitProgram method with this updated version:
-visitProgram(ctx) {
+   visitProgram(ctx) {
     const input = ctx.start.getInputStream();
     const fullText = input.getText(0, input.size - 1);
-
-    
-    
-    
 
     if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
         throw new Error('style elements cannot be assigned to variables');
@@ -479,167 +258,75 @@ visitProgram(ctx) {
     const emittedLines = [];
     const componentVars = [];
     const componentFns = [];
-    let rootElement = null;
+    const topLevelElements = []; // Track ALL top-level elements, not just the first
 
-    // Special handling for style tags at the top level
-    if (isComponent && fullText.includes('<style>')) {
-        // Extract style content manually from the full text
-        const styleMatch = fullText.match(/<style>([\s\S]*?)<\/style>/);
-        if (styleMatch) {
-            const styleContent = styleMatch[1].trim();
-            const styleElName = `el${this.elementCounter++}`;
-            
-            const styleCode = `const ${styleElName} = document.createElement('style');\n` +
-                             `${styleElName}.textContent = \`${styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;\n` +
-                             `document.head.appendChild(${styleElName});\n`;
-            
-            emittedLines.push(styleCode);
-            
-            // Now process the rest of the content after removing the style tag
-            const remainingText = fullText.replace(/<style>[\s\S]*?<\/style>/, '').trim();
-            
-            // Parse the remaining content by skipping past the style-related parse errors
-            let skipUntilValidElement = false;
-            
-            for (const child of ctx.children ?? []) {
-                const childText = child.getText ? child.getText() : '';
+    for (const child of ctx.children ?? []) {
+        if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
+
+        if (isComponent && child.constructor.name === 'ProgramElementContext') {
+            if (child.reactiveBlock && child.reactiveBlock()) {
+                this.visit(child.reactiveBlock());
+                continue;
+            }
+
+            if (child.htmlElement && child.htmlElement()) {
+                const currentElName = `el${this.elementCounter}`;
+                const htmlElCtx = child.htmlElement();
                 
-                // Skip the broken style-related parse nodes
-                if (childText.includes('style>') || childText.includes('.redText') || 
-                    childText.includes('color:') || childText.includes('red;}') ||
-                    childText === '{' || childText === '}' || childText === '<' || 
-                    childText === '</' || childText === ':' || 
-                    childText.includes('<missing')) {
+                if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
+                    continue;
+                }
+                const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
+
+                const code = this.visit(child.htmlElement());
+                if (code) emittedLines.push(code);
+
+                // Add ALL top-level elements (except style)
+                if (tagName !== 'style') {
+                    topLevelElements.push(currentElName);
+                }
+                continue;
+            }
+            
+            if (child.line && child.line()) {
+                const stmt = child.line().statement?.();
+                if (!stmt) continue;
+
+                if (stmt.simpleStatement?.()?.assignment?.()) {
+                    const code = this.visit(stmt);
+                    if (code.trim()) componentVars.push(code.replace(/;$/, ''));
                     continue;
                 }
                 
-                // Look for the actual HTML content
-                if (childText.includes('<div>') || 
-                    (child.constructor.name === 'ProgramElementContext' && 
-                     child.htmlElement && child.htmlElement())) {
-                    
-                    // Found valid HTML element
-                    const currentElName = `el${this.elementCounter}`;
-                    const code = this.visit(child);
-                    if (code) {
-                        emittedLines.push(code);
-                        if (!rootElement) {
-                            rootElement = currentElName;
-                        }
-                    }
+                if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
+                    const code = this.visit(stmt);
+                    if (code.trim()) componentVars.push(code.replace(/;$/, ''));
                     continue;
                 }
                 
-                // Process other valid children
-                if (child.symbol?.type === antlr4.Token.EOF || 
-                    child.constructor.name === 'ErrorNodeImpl') continue;
-                
-                if (child.constructor.name === 'ProgramElementContext') {
-                    if (child.line && child.line()) {
-                        const stmt = child.line().statement?.();
-                        if (!stmt) continue;
-
-                        if (stmt.simpleStatement?.()?.assignment?.()) {
-                            const code = this.visit(stmt);
-                            if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                            continue;
-                        }
-                        
-                        if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-                            const code = this.visit(stmt.compoundStatement().functionDefinition());
-                            if (code.trim()) componentFns.push(code);
-                            continue;
-                        }
-                    }
+                if (stmt.compoundStatement?.()?.functionDefinition?.()) {
+                    const code = this.visit(stmt.compoundStatement().functionDefinition());
+                    if (code.trim()) componentFns.push(code);
+                    continue;
                 }
             }
         }
-    } else {
-        // Normal processing for non-style content
-        for (const child of ctx.children ?? []) {
-            
-            
-            
-            if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
 
-            if (isComponent && child.constructor.name === 'ProgramElementContext') {
-                
-                
-                if (child.reactiveBlock && child.reactiveBlock()) {
-                    
-                    this.visit(child.reactiveBlock());
-                    continue;
-                }
-
-                if (child.htmlElement && child.htmlElement()) {
-                    
-                    const currentElName = `el${this.elementCounter}`;
-                    const htmlElCtx = child.htmlElement();
-                    
-                    
-                    
-                    if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
-                        
-                        continue;
-                    }
-                    const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
-                    
-
-                    const code = this.visit(child.htmlElement());
-                    if (code) emittedLines.push(code);
-
-                    if (!rootElement && tagName !== 'style') {
-                        rootElement = currentElName;
-                    }
-                    continue;
-                }
-                
-                if (child.line && child.line()) {
-                    
-                    const stmt = child.line().statement?.();
-                    if (!stmt) continue;
-
-                    if (stmt.simpleStatement?.()?.assignment?.()) {
-                        const code = this.visit(stmt);
-                        if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                        continue;
-                    }
-                    
-                    if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
-                        const code = this.visit(stmt);
-                        if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                        continue;
-                    }
-                    
-                    if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-                        const code = this.visit(stmt.compoundStatement().functionDefinition());
-                        if (code.trim()) componentFns.push(code);
-                        continue;
-                    }
-                }
-            }
-
-            const code = this.visit(child);
-            
-            if (code) emittedLines.push(code);
-        }
+        const code = this.visit(child);
+        if (code) emittedLines.push(code);
     }
 
     const bodyCode = emittedLines.filter(Boolean).join('\n');
 
-    /* ========== 3. helper snippets ========== */
     const helpers = `
 function $$createText(data){return document.createTextNode(data);}
 function $$listen(node,e,h){node.addEventListener(e,h);}
 function $$setAttribute(n,a,v){
     if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
-
     else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
     else{n.setAttribute(a,v);}
-}const _effects = [];
-function _runEffects(){ for(const f of _effects) f();}`;
+}`;
 
-    /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
     if (isComponent) {
         const destructure = this.componentProps.length
             ? `const { ${this.componentProps.join(', ')} } = props;`
@@ -651,8 +338,12 @@ function _runEffects(){ for(const f of _effects) f();}`;
             ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
             : '';
 
-        // Indent the DOM creation logic to fit inside the _render function
         const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
+
+        // Append ALL top-level elements, not just one
+        const appendElements = topLevelElements.length > 0
+            ? topLevelElements.map(el => `        root.appendChild(${el});`).join('\n')
+            : '';
 
         return `${helpers}
 
@@ -664,22 +355,18 @@ export default function ${this.componentName}(props = {}) {
 ${varDecls}
 ${fnDecls}
 
-
     function _runComputations() {
 ${this.computedCode.map(line => '        ' + line).join('\n')}
     }
 
     function _render() {
-
         _runComputations();
-
         root.innerHTML = '';
 
 ${indentedBody}
 
-        if (${rootElement}) {
-            root.appendChild(${rootElement});
-        }
+        // Append all top-level elements
+${appendElements}
     }
 
     const _effects = [_render];
@@ -687,7 +374,7 @@ ${indentedBody}
         for (const f of _effects) f();
     }
 
-    _render(); // Initial render call.
+    _render();
 
     return root;
 }`;

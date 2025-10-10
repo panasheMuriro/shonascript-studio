@@ -171,3 +171,80 @@
 .Resizer.horizontal:hover {
   @apply border-blue-500;
 }
+
+
+/* Add to your existing CSS */
+
+/* Console Panel Styles */
+.console-panel {
+  @apply h-full flex flex-col bg-gray-900;
+}
+
+.console-header {
+  @apply flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700;
+}
+
+.console-title {
+  @apply text-sm font-medium text-gray-300;
+}
+
+.console-clear-btn {
+  @apply flex items-center space-x-1 px-3 py-1 text-xs text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded transition-colors;
+}
+
+.console-content {
+  @apply flex-1 overflow-y-auto;
+}
+
+.console-empty {
+  @apply flex flex-col items-center justify-center h-full text-gray-500;
+}
+
+.console-empty p {
+  @apply mt-2 text-sm;
+}
+
+.console-messages {
+  @apply p-2 font-mono text-sm;
+}
+
+.console-message {
+  @apply flex items-start space-x-2 py-1 px-2 hover:bg-gray-800/50 rounded;
+}
+
+.console-timestamp {
+  @apply flex items-center space-x-1 text-xs text-gray-500 min-w-[80px];
+}
+
+.console-text {
+  @apply flex-1 break-all;
+}
+
+/* Console message types */
+.console-log {
+  @apply text-gray-300;
+}
+
+.console-error {
+  @apply text-red-400;
+}
+
+.console-error .console-timestamp {
+  @apply text-red-500/70;
+}
+
+.console-warn {
+  @apply text-yellow-400;
+}
+
+.console-warn .console-timestamp {
+  @apply text-yellow-500/70;
+}
+
+.console-info {
+  @apply text-blue-400;
+}
+
+.console-info .console-timestamp {
+  @apply text-blue-500/70;
+}
