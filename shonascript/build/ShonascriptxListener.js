@@ -1085,6 +1085,15 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 	}
 
 
+	// Enter a parse tree produced by ShonascriptxParser#zvanyorwaVar.
+	enterZvanyorwaVar(ctx) {
+	}
+
+	// Exit a parse tree produced by ShonascriptxParser#zvanyorwaVar.
+	exitZvanyorwaVar(ctx) {
+	}
+
+
 	// Enter a parse tree produced by ShonascriptxParser#naturalEqualityOp.
 	enterNaturalEqualityOp(ctx) {
 	}

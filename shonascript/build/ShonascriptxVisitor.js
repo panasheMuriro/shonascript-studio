@@ -726,6 +726,12 @@ export default class ShonascriptxVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by ShonascriptxParser#zvanyorwaVar.
+	visitZvanyorwaVar(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by ShonascriptxParser#naturalEqualityOp.
 	visitNaturalEqualityOp(ctx) {
 	  return this.visitChildren(ctx);

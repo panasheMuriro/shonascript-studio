@@ -49,7 +49,7 @@ linearObjectDefinition
     : ID (HAS | PANE) COLON linearObjectBody
     ;
 anonymousFunctionAssignment
-    : assignable ('=' | NDI | I) (FUNCTION | BASA) '(' parameterList? ')' COLON suite
+    : assignable ('=' | NDI) (FUNCTION | BASA) '(' parameterList? ')' COLON suite
     ;
 
 linearObjectBody
@@ -406,7 +406,7 @@ memberAccess
     | '[' expression ']'
     ;
 
-assignment : assignable ('=' | NDI | I) NEWLINE* expression ;
+assignment : assignable ('=' | NDI) NEWLINE* expression ;
 
 nyoraStatement : NYORA expression (',' expression)* ;
 arrayAdd : ISA expression MU expression ;
@@ -510,6 +510,7 @@ primaryExpression
     | BOOLEAN #boolean
     | STRING #string
     | ID #variable
+    | ZVANYORWA #zvanyorwaVar 
     | '(' expression ')' #parens
     | primaryExpression NCLASS MU expression #inArrayOp
     | primaryExpression NCLASS MU STRING #inStringOp
@@ -631,7 +632,7 @@ EVENT_CLICK : 'rikabayiwa' | 'rakabayiwa' | 'rikapresswa' | 'rakapresswa' ;
 EVENT_SUBMIT: 'rikasubmitwa' ;
 EVENT_CHANGE: 'ikachinjwa';
 NDI : 'ndi' ;
-I   : 'i' ;
+// I   : 'i' ;
 EQUALITY_VERB : ('a'|'ya'|'va'|'wa'|'ra'|'zva'|'cha'|'kwa'|'sva'|'dza'|'rwa'|'twa')
               ('kaenzana' | 'kafanana') ;
 EQUALITY_PREPOSITION : 'na' | 'ne' ;

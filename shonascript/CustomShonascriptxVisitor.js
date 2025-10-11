@@ -11,6 +11,8 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
         this.effects = [];   // collected effect functions
         this.effectCounter = 0;
 
+        this.textNodeCounter = 0;
+
 
         // Scope management
         this.scopeStack = [new Map()];
@@ -59,11 +61,16 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
 
 
     _processTailwindClasses(classString) {
-    return classString;
-}
+        return classString;
+    }
     _maybeRunEffects() {
         return this.effects.length ? ' _runEffects();' : '';
     }
+
+    _getStableKey(node) {
+    const token = node.start || node;
+    return `k_${token.line}_${token.column}`;
+}
 
     _emitInterpolatedText(raw, parent, insideStyle) {
         const lines = [];
@@ -436,21 +443,25 @@ function $$setAttribute(n,a,v){
 function _runEffects(){ for(const f of _effects) f();}`;
 
         /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
-        if (isComponent) {
-            const destructure = this.componentProps.length
-                ? `const { ${this.componentProps.join(', ')} } = props;`
-                : '';
-            const varDecls = componentVars.length
-                ? componentVars.map(l => '    ' + l + ';').join('\n')
-                : '';
-            const fnDecls = componentFns.length
-                ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
-                : '';
+if (isComponent) {
+    const destructure = this.componentProps.length
+        ? `const { ${this.componentProps.join(', ')} } = props;`
+        : '';
+    const varDecls = componentVars.length
+        ? componentVars.map(l => '    ' + l + ';').join('\n')
+        : '';
+    const fnDecls = componentFns.length
+        ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
+        : '';
 
-            // Indent the DOM creation logic to fit inside the _render function
-            const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
+    // Check if zvanyorwa is needed
+    const needsZvanyorwa = bodyCode.includes('zvanyorwa');
+    const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
 
-            return `${helpers}
+    // Indent the DOM creation logic to fit inside the _render function
+    const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
+
+    return `${helpers}
 
 export default function ${this.componentName}(props = {}) {
 
@@ -458,25 +469,38 @@ export default function ${this.componentName}(props = {}) {
 
     ${destructure}
 ${varDecls}
+${zvanyorwaDecl}
 ${fnDecls}
-
 
     function _runComputations() {
 ${this.computedCode.map(line => '        ' + line).join('\n')}
     }
 
-    function _render() {
+   function _render() {
+    /* remember focus */
+    const activeElem = root.contains(document.activeElement)
+                       ? document.activeElement : null;
+    const activeKey  = activeElem ? activeElem.getAttribute('data-k') : null;
+    const caretStart = activeElem?.selectionStart ?? null;
+    const caretEnd   = activeElem?.selectionEnd   ?? null;
 
-        _runComputations();
+    _runComputations();
 
-        root.innerHTML = '';
-
+    root.innerHTML = '';
 ${indentedBody}
 
-        if (${rootElement}) {
-            root.appendChild(${rootElement});
-        }
+    /* restore focus */
+    if (activeKey) {
+        requestAnimationFrame(() => {
+            const fresh = root.querySelector('[data-k="'+activeKey+'"]');
+            if (fresh && fresh !== document.activeElement) {
+                fresh.focus({ preventScroll:true });
+                if (caretStart!==null && caretEnd!==null && fresh.setSelectionRange)
+                    fresh.setSelectionRange(caretStart, caretEnd);
+            }
+        });
     }
+}
 
     const _effects = [_render];
     function _runEffects() {
@@ -487,7 +511,7 @@ ${indentedBody}
 
     return root;
 }`;
-        }
+}
 
         /* ========== 5. REGULAR (SCRIPT) OUTPUT (UNCHANGED) ========== */
         let header = '';
@@ -613,6 +637,21 @@ ${indentedBody}
     visitSimpleStatement(ctx) {
 
         const inEventHandler = this.currentFunction === "anonymous" || this.currentEvent;
+        const txt = ctx.getText().trim();
+
+        if (txt.includes('=') && txt.endsWith('zvanyorwa')) {
+            const [lhsRaw/* "zita " */,] = txt.split('=');
+            const lhs = lhsRaw.trim();            // ==>  "zita"
+            let decl = '';
+
+            if (!this.isDeclared(lhs)) {          // auto-declare if necessary
+                decl = (this.inAsyncWrapper && this.scopeStack.length === 1) ? '' : 'let ';
+                this.declare(lhs);
+            }
+            // trigger re-render in component mode
+            const effects = this.target === 'component' ? ' _runEffects();' : '';
+            return `${decl}${lhs} = zvanyorwa;${effects}`;
+        }
 
         if (
             this.target === 'component' &&
@@ -629,7 +668,9 @@ ${indentedBody}
         if (ctx.anonymousFunctionAssignment()) {
             return this.visitAnonymousFunctionAssignment(ctx.anonymousFunctionAssignment());
         }
+
         if (ctx.assignment()) return this.visit(ctx.assignment()) + ";";
+
         if (ctx.reactiveOneLiner()) return this.visitReactiveOneLiner(ctx.reactiveOneLiner());
         if (ctx.propsDeclaration()) return this.visitPropsDeclaration(ctx.propsDeclaration());
         if (ctx.incrementStatement()) return this.visit(ctx.incrementStatement()) + ";";
@@ -698,6 +739,8 @@ ${indentedBody}
 
         /* ---- right side & emit ------------------------------------ */
         const rhs = this.visit(ctx.expression());
+
+        console.log(`Assignment: ${lhsString} = ${rhs}`);
         return `${decl}${lhsString} = ${rhs}`;
     }
     visitIncrementStatement(ctx) {
@@ -1041,12 +1084,13 @@ ${indentedBody}
         return this.removeTrailingCommas(code);
     }
 
+
     visitAnonymousFunctionExpr(ctx) {
         const isAsync = this.containsFetch(ctx.suite());
         const asyncKeyword = isAsync ? "async " : "";
 
         const previousFn = this.currentFunction;
-        this.currentFunction = "anonymous";  // Mark that we're in an anonymous function
+        this.currentFunction = "anonymous";
 
         this.enterScope();
         const params = ctx.parameterList() ? ctx.parameterList().ID().map(t => {
@@ -1055,15 +1099,20 @@ ${indentedBody}
             return p;
         }) : [];
 
-        const bodyCode = this.visit(ctx.suite());
+        // Check if the function body uses zvanyorwa
+        let bodyCode = this.visit(ctx.suite());
+        const usesZvanyorwa = bodyCode.includes('zvanyorwa');
+
+        // If it uses zvanyorwa, ensure it's declared in scope
+        if (usesZvanyorwa && !this.isDeclared('zvanyorwa')) {
+            // zvanyorwa will be available in the wrapper scope
+            this.declare('zvanyorwa');
+        }
+
         let finalBody = bodyCode;
 
-        // In component mode, any mutation should trigger a re-render
         if (this.target === 'component') {
-            // const needsEffects = /(\+\+|--|[^=!<>]=(?!=)|\.push\(|\.pop\(|\.shift\(|\.unshift\(|\.splice\()/s.test(bodyCode);
             const needsEffects = /(\+\+|--|[^=!<>]=(?!=)|\.push\(|\.pop\(|\.shift\(|\.unshift\(|\.splice\(|delete\b)/s.test(bodyCode);
-
-
             if (needsEffects) {
                 finalBody += `${this.getIndent()}    _runEffects();\n`;
             }
@@ -1072,7 +1121,7 @@ ${indentedBody}
         let code = `${asyncKeyword}function(${params.join(", ")}) {\n${finalBody}${this.getIndent()}}`;
 
         this.leaveScope();
-        this.currentFunction = previousFn;  // Restore previous function context
+        this.currentFunction = previousFn;
 
         return this.removeTrailingCommas(code).trimEnd();
     }
@@ -1106,181 +1155,196 @@ ${indentedBody}
         return '';
     }
 
-    visitHtmlBlockElement(ctx) {
-        const elName = `el${this.elementCounter++}`;
-        const rawTag = ctx.tagName(0).getText();
-        const tagName = rawTag.toLowerCase();
+//     visitHtmlBlockElement(ctx) {
+//     const elName   = `el${this.elementCounter++}`;
+//     const rawTag   = ctx.tagName(0).getText();
+//     const tagName  = rawTag.toLowerCase();
+//     const inExpr   = ctx.parentCtx &&
+//                      ctx.parentCtx.constructor.name === 'HtmlExprContext';
 
+//     /* ---- where to append (same as before) ---- */
+//     const inComponent = this.target === 'component';
+//     let parent;
+//     if (inExpr)            parent = null;
+//     else if (tagName==='style') parent = 'document.head';
+//     else if (inComponent)  parent = this.parentStack.at(-1);
+//     else                   parent = this.parentStack.at(-1);
 
+//     /* ---- element creation + stable key ---- */
+//     const stableKey = this._getStableKey(ctx);
+//     let code, childrenCode = '';
+//     if (inExpr) {
+//         code  = `(() => {\n`;
+//         code += `    const ${elName} = document.createElement('${tagName}');\n`;
+//         code += `    ${elName}.setAttribute('data-k', '${stableKey}');\n`;
+//     } else {
+//         code  = `const ${elName} = document.createElement('${tagName}');\n`;
+//         code += `${elName}.setAttribute('data-k', '${stableKey}');\n`;
+//     }
 
+//     /* ---- attributes (unchanged except runs *after* key) ---- */
+//     const attrs = ctx.attribute() || [];
+//     let hasExplicitValue = false;
+//     for (const a of attrs) {
+//         const snip = this.visitAttribute(a, elName);
+//         if (snip) code += inExpr
+//               ? snip.split('\n').filter(l=>l).map(l=>'    '+l).join('\n')+'\n'
+//               : snip;
 
-        // Check if we're in an expression context (being assigned to a variable)
-        const inExpression = ctx.parentCtx &&
-            ctx.parentCtx.constructor.name === 'HtmlExprContext';
+//         if (a.attrName && a.attrName().getText()==='value') hasExplicitValue=true;
+//     }
 
-        /* ── Style validation ─────────────────*/
-        if (tagName === 'style') {
+//     /* ---- auto-id for form fields (optional) ---- */
+//     if (['input','textarea','select'].includes(tagName)) {
+//         const already = attrs.some(a=>a.attrName && a.attrName().getText()==='id');
+//         if (!already)
+//             code += inExpr
+//                  ? `    ${elName}.id = 'input_${this.elementCounter}';\n`
+//                  : `${elName}.id = 'input_${this.elementCounter}';\n`;
+//     }
 
+//     /* ---- children (unchanged) ---- */
+//     this.parentStack.push(elName); this.tagStack.push(tagName);
+//       if (tagName === 'option' && !ctx.htmlContent()) {
+//         const m = ctx.getText().match(/>([\s\S]*?)<\/option/i);
+//         const txt = (m ? m[1] : '').trim();
+//         if (txt) {
+//             const esc = txt.replace(/`/g,'\\`').replace(/\$/g,'\\$');
+//             childrenCode += inExpr
+//                  ? `    ${elName}.appendChild($$createText(\`${esc}\`));\n`
+//                  : `${elName}.appendChild($$createText(\`${esc}\`));\n`;
+//         }}
+//     else if (ctx.htmlContent()) {
+//         const inner = this.visit(ctx.htmlContent());
+//         if (inner) childrenCode = inExpr
+//              ? inner.split('\n').filter(l=>l).map(l=>'    '+l).join('\n')+'\n'
+//              : inner;
+//         if (tagName==='option' && !hasExplicitValue)
+//             childrenCode += inExpr
+//                 ? `    if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`
+//                 : `if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`;
+//     }
 
+//     this.parentStack.pop(); this.tagStack.pop();
 
+//     /* ---- final assembly ---- */
+//     if (inExpr) {
+//         code += childrenCode;
+//         code += `    return ${elName};\n})();`;
+//         return code;
+//     }
+//     code += childrenCode;
+//     if (parent) code += `${parent}.appendChild(${elName});\n`;
+//     return code;
+// }
+visitHtmlBlockElement(ctx) {
+    /* ---------- basic info ---------- */
+    const elName  = `el${this.elementCounter++}`;
+    const rawTag  = ctx.tagName(0).getText();
+    const tagName = rawTag.toLowerCase();
+    const inExpr  = ctx.parentCtx &&
+                    ctx.parentCtx.constructor.name === 'HtmlExprContext';
 
-            // If being assigned, throw error
-            if (inExpression) {
-                throw Error(
-                    "<style> elements cannot be assigned to variables – they must stay at the top level of the component."
-                );
-            }
+    /* ---------- where to append ---------- */
+    const inComponent = this.target === 'component';
+    let parent;
+    if (inExpr)               parent = null;
+    else if (tagName === 'style') parent = 'document.head';
+    else                         parent = this.parentStack.at(-1);
 
-            // Check if at top level (existing logic)
-            if (this.parentStack.length !== 1) {
-                throw Error(
-                    "<style> tags must be declared at the top level; " +
-                    "don't nest them inside other elements, loops or conditionals."
-                );
-            }
+    /* ---------- create element + stable key ---------- */
+    const key  = this._getStableKey(ctx);
+    let code   = inExpr
+        ? `(() => {\n    const ${elName} = document.createElement('${tagName}');\n`
+        : `const ${elName} = document.createElement('${tagName}');\n`;
+    code      += inExpr
+        ? `    ${elName}.setAttribute('data-k', '${key}');\n`
+        : `${elName}.setAttribute('data-k', '${key}');\n`;
+
+    /* ---------- attributes ---------- */
+    const attrs            = ctx.attribute() || [];
+    let hasExplicitValue   = false;
+    let selectBindExpr     = null;      // remember zvasarudzwa expr
+
+    for (const a of attrs) {
+        const aName = a.attrName ? a.attrName().getText() : '';
+        if (aName === 'value')         hasExplicitValue = true;
+        if (aName === 'zvasarudzwa')   selectBindExpr   = this.visit(a.shonaExpression());
+
+        const snip = this.visitAttribute(a, elName);
+        if (!snip) continue;
+        code += inExpr
+            ? snip.split('\n').filter(Boolean).map(l => '    ' + l).join('\n') + '\n'
+            : snip;
+    }
+
+    /* ---------- auto id for form fields ---------- */
+    if (['input', 'textarea', 'select'].includes(tagName)) {
+        const already = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
+        if (!already) {
+            code += inExpr
+                ? `    ${elName}.id = 'input_${this.elementCounter}';\n`
+                : `${elName}.id = 'input_${this.elementCounter}';\n`;
+        }
+    }
+
+    /* ---------- children ---------- */
+    const isVoid = this.voidTags?.has(tagName);          // <- needs voidTags Set
+    if (!isVoid) {
+        this.parentStack.push(elName);
+        this.tagStack.push(tagName);
+    }
+
+    let childrenCode = '';
+
+    /* text-only <option> */
+    if (tagName === 'option' && !ctx.htmlContent()) {
+        const m   = ctx.getText().match(/>([\s\S]*?)<\/option/i);
+        const txt = (m ? m[1] : '').trim();
+        if (txt) {
+            const esc = txt.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+            const line = `${elName}.appendChild($$createText(\`${esc}\`));\n`;
+            childrenCode += inExpr ? '    ' + line : line;
+        }
+    }
+
+    /* normal inner html */
+    if (ctx.htmlContent()) {
+        let inner = this.visit(ctx.htmlContent());
+        if (inner) {
+            inner = inExpr
+                ? inner.split('\n').filter(Boolean).map(l => '    ' + l).join('\n') + '\n'
+                : inner;
+            childrenCode += inner;
         }
 
-        /* ── Decide where to append ─────────────────*/
-        const inComponent = this.target === 'component';
-        let parent;
+        /* default value for <option> without explicit value */
+        if (tagName === 'option' && !hasExplicitValue) {
+            const fix = `if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`;
+            childrenCode += inExpr ? '    ' + fix : fix;
+        }
+    }
 
-        // If used as expression, don't determine parent yet
-        if (inExpression) {
-        parent = null;
-    } else if (tagName === 'style') {
-        parent = 'document.head';
-    } else if (inComponent) {
-        parent = this.parentStack.at(-1);
-        // Don't set parent to null for root - keep it as 'root'
-        // This ensures top-level elements get appended
+    if (!isVoid) {
+        this.parentStack.pop();
+        this.tagStack.pop();
+    }
+
+    /* ---------- assemble ---------- */
+    if (inExpr) {
+        code += childrenCode;
+        if (tagName === 'select' && selectBindExpr)
+            code += `    ${elName}.value = ${selectBindExpr};\n`;
+        code += `    return ${elName};\n})();`;
+        return code;
     } else {
-        parent = this.parentStack.at(-1);
+        code += childrenCode;
+        if (tagName === 'select' && selectBindExpr)
+            code += `${elName}.value = ${selectBindExpr};\n`;
+        if (parent) code += `${parent}.appendChild(${elName});\n`;
+        return code;
     }
-
-
-        /* ── Create element ─────────────────*/
-        let code = '';
-
-        // If in expression, wrap in IIFE
-        if (inExpression) {
-            code = `(() => {\n`;
-            code += `    const ${elName} = document.createElement('${tagName}');\n`;
-        } else {
-            code = `const ${elName} = document.createElement('${tagName}');\n`;
-        }
-
-
-
-        /* ── Handle attributes ─────────────────*/
-        const attrs = ctx.attribute() || [];
-        let hasExplicitValue = false;
-
-        for (const a of attrs) {
-            const snippet = this.visitAttribute(a, elName);
-            if (snippet) {
-                if (inExpression) {
-                    // Indent for IIFE
-                    const lines = snippet.split('\n').filter(l => l);
-                    code += lines.map(l => '    ' + l).join('\n') + '\n';
-                } else {
-                    code += snippet;
-                }
-            }
-
-            const aName = a.attrName ? a.attrName().getText() : '';
-            if (aName === 'value') hasExplicitValue = true;
-        }
-
-        /* ── Process children ─────────────────*/
-        // For style tags, we need to handle content specially
-        if (tagName === 'style' && ctx.htmlContent()) {
-
-
-
-            // Get the raw text from the input stream
-            const fullText = ctx.getText();
-
-
-            const closeTagIndex = fullText.lastIndexOf('</style>');
-
-
-            if (closeTagIndex > 0) {
-                // Extract content between tags from the original input
-                const openTagLength = fullText.indexOf('>') + 1;
-
-
-                const styleContent = fullText.substring(openTagLength, closeTagIndex).trim();
-
-
-                // Set the textContent of the style element
-                if (styleContent) {
-                    const escapedContent = styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-
-
-                    if (inExpression) {
-                        code += `    ${elName}.textContent = \`${escapedContent}\`;\n`;
-                    } else {
-                        code += `${elName}.textContent = \`${escapedContent}\`;\n`;
-                    }
-                }
-            }
-
-            // DON'T process children for style tags - skip the normal htmlContent processing
-        } else {
-
-            // Temporarily push to stack for children processing
-            this.parentStack.push(elName);
-            this.tagStack.push(tagName);
-
-            if (ctx.htmlContent()) {
-                const inner = this.visit(ctx.htmlContent());
-
-                if (inner) {
-                    if (inExpression) {
-                        // Indent children code for IIFE
-                        const lines = inner.split('\n').filter(l => l);
-                        code += lines.map(l => '    ' + l).join('\n') + '\n';
-                    } else {
-                        code += inner;
-                    }
-                }
-
-                /* Special: <option> without explicit value */
-                if (tagName === 'option' && !hasExplicitValue) {
-                    if (inExpression) {
-                        code += `    if (!${elName}.hasAttribute('value')) {\n`;
-                        code += `        ${elName}.value = ${elName}.textContent;\n`;
-                        code += `    }\n`;
-                    } else {
-                        code += `if (!${elName}.hasAttribute('value')) {\n`;
-                        code += `    ${elName}.value = ${elName}.textContent;\n`;
-                        code += `}\n`;
-                    }
-                }
-            }
-
-            this.parentStack.pop();
-            this.tagStack.pop();
-        }
-
-        /* ── Append to parent (only if not an expression) ─────────────────*/
-        if (!inExpression && parent) {
-
-            code += `${parent}.appendChild(${elName});\n`;
-        }
-
-
-
-        /* ── Return based on context ─────────────────*/
-        if (inExpression) {
-            // Close IIFE and return the element
-            code += `    return ${elName};\n`;
-            code += `})()`;
-            return code;  // Return the IIFE that creates and returns the element
-        }
-
-        return code;  // Return normal creation code
-    }
+}
 
     visitHtmlExpr(ctx) {
         // Only allow in component mode
@@ -1291,25 +1355,22 @@ ${indentedBody}
         }
         return this.visit(ctx.htmlElement());   // returns the IIFE string
     }
-
     visitHtmlSelfClosingElement(ctx) {
-        const elName = `el${this.elementCounter++}`;
-        const rawTag = ctx.tagName().getText();
-        const tagName = rawTag.toLowerCase();
+    const elName  = `el${this.elementCounter++}`;
+    const rawTag  = ctx.tagName().getText();
+    const tagName = rawTag.toLowerCase();
+    if (tagName==='style')
+        throw Error('<style> cannot be self-closing – write <style>…</style>.');
 
-        if (tagName === 'style')
-            throw Error("<style> cannot be self-closing – write <style> … </style>.");
+    const stableKey = this._getStableKey(ctx);
+    const isCustom  = /^[A-Z]/.test(rawTag);
+    const inComp    = this.target==='component';
+    let parent      = inComp ? (this.parentStack.at(-1)==='root'?null:this.parentStack.at(-1))
+                             : this.parentStack.at(-1);
 
-        const isCustom = /^[A-Z]/.test(rawTag);
+    /* ---- custom component (unchanged) ---- */
 
-        const inComponent = this.target === 'component';
-        let parent =
-            inComponent
-                ? (this.parentStack.at(-1) === 'root' ? null
-                    : this.parentStack.at(-1))
-                : this.parentStack.at(-1);
-
-        if (isCustom) {
+    if (isCustom) {
             const kvPairs = [];
 
             for (const a of ctx.attribute() || []) {
@@ -1332,16 +1393,18 @@ ${indentedBody}
             return `const ${elName} = ${call};\n`;
         }
 
-        let code = `const ${elName} = document.createElement('${tagName}');\n`;
+    /* ---- native element ---- */
+    let code = `const ${elName} = document.createElement('${tagName}');\n`;
+    code    += `${elName}.setAttribute('data-k', '${stableKey}');\n`;
 
-        for (const a of ctx.attribute() || []) {
-            const snippet = this.visitAttribute(a, elName);
-            if (snippet) code += snippet;
-        }
-
-        if (parent) code += `${parent}.appendChild(${elName});\n`;
-        return code;
+    for (const a of ctx.attribute() || []) {
+        const snip = this.visitAttribute(a, elName);
+        if (snip) code += snip;
     }
+
+    if (parent) code += `${parent}.appendChild(${elName});\n`;
+    return code;
+}
 
 
 
@@ -1366,54 +1429,179 @@ ${indentedBody}
         return '';                      // <- generates no JS by itself
     }
 
-  visitAttribute(ctx, elName) {
+    visitZvanyorwaVar(ctx) {
+        return 'zvanyorwa';
+    }
+
+   
+//     visitAttribute(ctx, elName) {
+//     const attrName = ctx.attrName ? ctx.attrName().getText() : '';
+
+//     // Handle event attributes
+//     if (attrName === 'rikasubmitwa' || attrName === 'rikabayiwa' ||
+//         attrName === 'ikachinjwa' || attrName === 'rakabayiwa' ||
+//         attrName === 'rikapresswa' || attrName === 'rakapresswa' ||
+//         attrName === 'ikanyorwa' || attrName === 'ikasarudzwa') {
+
+//         const handlerExpr = this.visit(ctx.shonaExpression());
+//         let domEvent = 'click';
+
+//         if (attrName === 'rikasubmitwa') domEvent = 'submit';
+//         else if (attrName === 'ikachinjwa') domEvent = 'change';
+//         else if (attrName === 'ikanyorwa') domEvent = 'input';
+//         else if (attrName === 'ikasarudzwa') domEvent = 'change';
+
+//         // For ikanyorwa, create a wrapper that injects zvanyorwa
+// if (attrName === 'ikanyorwa') {
+//     const handlerExpr = this.visit(ctx.shonaExpression());
+    
+//     // Try to infer which variable is being bound
+//     // This is a simple heuristic - look for common patterns
+//     let boundVar = null;
+//     if (handlerExpr.match(/^[a-zA-Z_]\w*$/)) {
+//         // Simple function name like "chinjaZita"
+//         // Try to infer from the function name
+//         const funcName = handlerExpr;
+//         if (funcName.toLowerCase().includes('zita')) {
+//             boundVar = 'zita';
+//         } else if (funcName.toLowerCase().includes('name')) {
+//             boundVar = 'name';
+//         }
+//     }
+    
+//     let code = '';
+    
+//     // Set initial value if we can infer the bound variable
+//     if (boundVar && this.isDeclared(boundVar)) {
+//         code += `$$setAttribute(${elName}, 'value', ${boundVar});\n`;
+//     }
+    
+//     // Add the event listener
+//     code += `$$listen(${elName}, 'input', (e) => {
+//         zvanyorwa = e.target.value;
+//         (${handlerExpr})(e);
+//     });\n`;
+    
+//     return code;
+// }
+
+//         return `$$listen(${elName}, '${domEvent}', ${handlerExpr});\n`;
+//     }
+//     // Handle zvanyorwa for two-way binding
+//     else if (attrName === 'zvanyorwa') {
+//         const bindingExpr = this.visit(ctx.shonaExpression());
+
+//         // Set initial value
+//         let code = `$$setAttribute(${elName}, 'value', ${bindingExpr});\n`;
+
+//         // Add automatic input handler for two-way binding
+//         const varMatch = bindingExpr.match(/^[a-zA-Z_]\w*$/);
+//         if (varMatch) {
+//             // Simple variable binding - add auto-update handler
+//             code += `$$listen(${elName}, 'input', (e) => { 
+//                 const zvanyorwa = e.target.value;
+//                 ${bindingExpr} = zvanyorwa; 
+//                 _runEffects(); 
+//             });\n`;
+//         }
+
+//         return code;
+//     }
+//     else {
+//         // Handle other attributes (unchanged)
+//         let actualAttrName = attrName;
+
+//         if (attrName === 'zvasarudzwa') actualAttrName = 'value';
+
+//         if (attrName === 'class' || attrName === 'className') {
+//             actualAttrName = 'class';
+
+//             if (ctx.STRING()) {
+//                 const classValue = ctx.STRING().getText();
+//                 const cleanClasses = classValue.slice(1, -1);
+//                 return `${elName}.className = '${cleanClasses}';\n`;
+//             } else if (ctx.shonaExpression()) {
+//                 const classExpr = this.visit(ctx.shonaExpression());
+//                 return `${elName}.className = ${classExpr};\n`;
+//             }
+//         }
+
+//         const value = ctx.STRING() ? ctx.STRING().getText() : this.visit(ctx.shonaExpression());
+//         return `$$setAttribute(${elName}, '${actualAttrName}', ${value});\n`;
+//     }
+// }
+
+/** Handle every HTML attribute (events, bindings, …) */
+visitAttribute(ctx, elName) {
     const attrName = ctx.attrName ? ctx.attrName().getText() : '';
 
-    // Handle event attributes (existing code)
-    if (attrName === 'rikasubmitwa' || attrName === 'rikabayiwa' ||
-        attrName === 'ikachinjwa' || attrName === 'rakabayiwa' ||
-        attrName === 'rikapresswa' || attrName === 'rakapresswa' ||
-        attrName === 'ikanyorwa' || attrName === 'ikasarudzwa') {
+    /* ────────────────────────────────
+       1.  EVENT ATTRIBUTES
+       ──────────────────────────────── */
+    const eventMap = {
+        rikasubmitwa : 'submit',
+        rikabayiwa   : 'click',
+        rakabayiwa   : 'click',
+        rikapresswa  : 'keypress',
+        rakapresswa  : 'keypress',
+        ikachinjwa   : 'change',
+        ikanyorwa    : 'input',
+        ikasarudzwa  : 'change'
+    };
+    if (eventMap[attrName]) {
+        const jsHandler = this.visit(ctx.shonaExpression());
+        const domEvent  = eventMap[attrName];
 
-        const handlerExpr = this.visit(ctx.shonaExpression());
-        let domEvent = 'click';
-
-        if (attrName === 'rikasubmitwa') domEvent = 'submit';
-        else if (attrName === 'ikachinjwa') domEvent = 'change';
-        else if (attrName === 'ikanyorwa') domEvent = 'input';
-        else if (attrName === 'ikasarudzwa') domEvent = 'change';
-
-        return `$$listen(${elName}, '${domEvent}', ${handlerExpr});\n`;
-    } else {
-        // Handle value attributes
-        let actualAttrName = attrName;
-
-        // Map Shona attributes to HTML attributes
-        if (attrName === 'zvanyorwa') actualAttrName = 'value';
-        else if (attrName === 'zvasarudzwa') actualAttrName = 'value';
-        
-        // Handle class/className attributes specially for Tailwind
-        if (attrName === 'class' || attrName === 'className') {
-            actualAttrName = 'class';
-            
-            if (ctx.STRING()) {
-                // Static class string - perfect for Tailwind classes
-                const classValue = ctx.STRING().getText();
-                // Remove quotes from the string
-                const cleanClasses = classValue.slice(1, -1);
-                return `${elName}.className = '${cleanClasses}';\n`;
-            } else if (ctx.shonaExpression()) {
-                // Dynamic class expression
-                const classExpr = this.visit(ctx.shonaExpression());
-                return `${elName}.className = ${classExpr};\n`;
-            }
+        /* special case  ikanyorwa  → inject zvanyorwa = e.target.value */
+        if (attrName === 'ikanyorwa') {
+            return `$$listen(${elName}, '${domEvent}', e => {
+                zvanyorwa = e.target.value;
+                (${jsHandler})(e);
+            });\n`;
         }
 
-        const value = ctx.STRING() ? ctx.STRING().getText() : this.visit(ctx.shonaExpression());
-        return `$$setAttribute(${elName}, '${actualAttrName}', ${value});\n`;
+        /* normal custom handler */
+        return `$$listen(${elName}, '${domEvent}', ${jsHandler});\n`;
     }
+
+    /* ────────────────────────────────
+       2.  TWO-WAY TEXT INPUT binding  ( zvanyorwa )
+       ──────────────────────────────── */
+    if (attrName === 'zvanyorwa') {
+        const bindExpr = this.visit(ctx.shonaExpression());
+        let code  = `$$setAttribute(${elName}, 'value', ${bindExpr});\n`;
+        code     += `$$listen(${elName}, 'input', e => {
+            const zvanyorwa = e.target.value;
+            ${bindExpr} = zvanyorwa;
+            _runEffects();
+        });\n`;
+        return code;
+    }
+
+    /* ────────────────────────────────
+       3.  TWO-WAY SELECT binding      ( zvasarudzwa )
+       ──────────────────────────────── */
+    if (attrName === 'zvasarudzwa') {
+        const bindExpr = this.visit(ctx.shonaExpression());
+        let code  = `$$setAttribute(${elName}, 'value', ${bindExpr});\n`;
+        code     += `$$listen(${elName}, 'change', e => {
+            ${bindExpr} = e.target.value;
+            _runEffects();
+        });\n`;
+        return code;
+    }
+
+    /* ────────────────────────────────
+       4.  NORMAL ATTRIBUTE
+       ──────────────────────────────── */
+    let realAttr = attrName === 'className' ? 'class' : attrName;
+    const value  = ctx.STRING()
+                  ? ctx.STRING().getText()
+                  : this.visit(ctx.shonaExpression());
+
+    return `$$setAttribute(${elName}, '${realAttr}', ${value});\n`;
 }
-   
+
 
     visitHtmlContent(ctx) {
         const elements = ctx.htmlContentElement() || [];
@@ -2723,25 +2911,51 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
         return ctx.STRING().getText();
     }
 
+    // visitVariable(ctx) {
+    //     const name = ctx.ID().getText();
+
+    //     /* 1️⃣  Inside an object-method?  
+    //        → use   this.<prop>   instead of a global variable        */
+    //     if (
+    //         this.objectPropsStack.length &&              // we are compiling an object
+    //         this.currentFunction !== null &&             // inside *a* function/method
+    //         this.objectPropsStack.at(-1).has(name)       // name is one of that object’s props
+    //     ) {
+    //         return `this.${name}`;
+    //     }
+
+    //     /* 2️⃣  Special helper for submit-handlers */
+    //     if (this.currentEvent?.type === 'submit' && name === 'mavalues') {
+    //         return 'Object.fromEntries(new FormData(event.target).entries())';
+    //     }
+
+    //     /* 3️⃣  Fallback: plain variable */
+    //     return name;
+    // }
     visitVariable(ctx) {
         const name = ctx.ID().getText();
 
-        /* 1️⃣  Inside an object-method?  
-           → use   this.<prop>   instead of a global variable        */
+        // Check if zvanyorwa is being used
+        if (name === 'zvanyorwa') {
+            // In the context of an event handler, zvanyorwa should be available
+            return 'zvanyorwa';
+        }
+
+        /* Inside an object-method? */
         if (
-            this.objectPropsStack.length &&              // we are compiling an object
-            this.currentFunction !== null &&             // inside *a* function/method
-            this.objectPropsStack.at(-1).has(name)       // name is one of that object’s props
+            this.objectPropsStack.length &&
+            this.currentFunction !== null &&
+            this.objectPropsStack.at(-1).has(name)
         ) {
             return `this.${name}`;
         }
 
-        /* 2️⃣  Special helper for submit-handlers */
+        /* Special helper for submit-handlers */
         if (this.currentEvent?.type === 'submit' && name === 'mavalues') {
             return 'Object.fromEntries(new FormData(event.target).entries())';
         }
 
-        /* 3️⃣  Fallback: plain variable */
+        /* Fallback: plain variable */
         return name;
     }
 
