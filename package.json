@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:grammar": "java -jar antlr-4.13.2-complete.jar -Dlanguage=JavaScript -visitor -o shonascript/build Shonascriptx.g4"
+
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

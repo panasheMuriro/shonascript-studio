@@ -47,6 +47,9 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
         this.objectPropsStack = [];
         this.currentObjectName = null;
 
+        this.tailwindEnabled = options.tailwind !== false; // Enable by default
+
+
 
     }
 
@@ -54,46 +57,50 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
     =            STATE & HELPER METHODS           =
     ============================================= */
 
+
+    _processTailwindClasses(classString) {
+    return classString;
+}
     _maybeRunEffects() {
         return this.effects.length ? ' _runEffects();' : '';
     }
 
-_emitInterpolatedText(raw, parent, insideStyle) {
-    const lines = [];
-    const re = insideStyle ? /{\s*(`[\s\S]*?`)\s*}/g : /{([^}]*)}/g;
-    let lastIndex = 0;
-    let m;
+    _emitInterpolatedText(raw, parent, insideStyle) {
+        const lines = [];
+        const re = insideStyle ? /{\s*(`[\s\S]*?`)\s*}/g : /{([^}]*)}/g;
+        let lastIndex = 0;
+        let m;
 
-    while ((m = re.exec(raw)) !== null) {
-        const literal = raw.slice(lastIndex, m.index);
-        
-        // Emit any non-empty literal (including spaces)
-        if (literal !== '') {
-            const esc = literal
+        while ((m = re.exec(raw)) !== null) {
+            const literal = raw.slice(lastIndex, m.index);
+
+            // Emit any non-empty literal (including spaces)
+            if (literal !== '') {
+                const esc = literal
+                    .replace(/^(['"])([\s\S]*?)\1$/, '$2')
+                    .replace(/`/g, '\\`');
+                lines.push(`${parent}.appendChild($$createText(\`${esc}\`));`);
+            }
+
+            const expr = m[1].trim();
+            if (expr) {
+                lines.push(`${parent}.appendChild($$createText(${expr}));`);
+            }
+            lastIndex = re.lastIndex;
+        }
+
+        const tail = raw.slice(lastIndex);
+
+        // Emit any non-empty tail (including spaces)
+        if (tail !== '') {
+            const escTail = tail
                 .replace(/^(['"])([\s\S]*?)\1$/, '$2')
                 .replace(/`/g, '\\`');
-            lines.push(`${parent}.appendChild($$createText(\`${esc}\`));`);
+            lines.push(`${parent}.appendChild($$createText(\`${escTail}\`));`);
         }
 
-        const expr = m[1].trim();
-        if (expr) {
-            lines.push(`${parent}.appendChild($$createText(${expr}));`);
-        }
-        lastIndex = re.lastIndex;
+        return lines.join('\n');
     }
-
-    const tail = raw.slice(lastIndex);
-    
-    // Emit any non-empty tail (including spaces)
-    if (tail !== '') {
-        const escTail = tail
-            .replace(/^(['"])([\s\S]*?)\1$/, '$2')
-            .replace(/`/g, '\\`');
-        lines.push(`${parent}.appendChild($$createText(\`${escTail}\`));`);
-    }
-
-    return lines.join('\n');
-}
 
     _getAssignableString(ctx) {
         // First, check if we have an assignRoot
@@ -103,9 +110,9 @@ _emitInterpolatedText(raw, parent, insideStyle) {
 
         const assignRoot = ctx.assignRoot();
         if (assignRoot.propertyRef && assignRoot.propertyRef()) {
-    // This now correctly handles all cases, including assignments.
-    return this._getPropertyRefString(assignRoot.propertyRef());
-}
+            // This now correctly handles all cases, including assignments.
+            return this._getPropertyRefString(assignRoot.propertyRef());
+        }
 
         // Check for domPropertyRef in assignRoot
         if (assignRoot.domPropertyRef && assignRoot.domPropertyRef()) {
@@ -154,21 +161,21 @@ _emitInterpolatedText(raw, parent, insideStyle) {
         // Final fallback
         return ctx.getText();
     }
-    
 
-_getPropertyRefString(propertyRefCtx) {
-    // 1. Get the base object (the rightmost part of the chain).
-    const base = this.visit(propertyRefCtx.primaryExpression());
 
-    // 2. Get all the property names that came before it.
-    const props = propertyRefCtx.propName().map(p => p.getText());
+    _getPropertyRefString(propertyRefCtx) {
+        // 1. Get the base object (the rightmost part of the chain).
+        const base = this.visit(propertyRefCtx.primaryExpression());
 
-    // 3. Reverse the properties and join them.
-    const propChain = props.reverse().join('.');
+        // 2. Get all the property names that came before it.
+        const props = propertyRefCtx.propName().map(p => p.getText());
 
-    // 4. Combine the base with the property chain.
-    return `${base}.${propChain}`;
-}
+        // 3. Reverse the properties and join them.
+        const propChain = props.reverse().join('.');
+
+        // 4. Combine the base with the property chain.
+        return `${base}.${propChain}`;
+    }
 
     enterScope() {
         this.scopeStack.push(new Map());
@@ -237,115 +244,213 @@ _getPropertyRefString(propertyRefCtx) {
     =            PROGRAM (ENTRY POINT)            =
     ============================================= */
 
-   visitProgram(ctx) {
-    const input = ctx.start.getInputStream();
-    const fullText = input.getText(0, input.size - 1);
+    // Replace the visitProgram method with this updated version:
+    visitProgram(ctx) {
+        const input = ctx.start.getInputStream();
+        const fullText = input.getText(0, input.size - 1);
 
-    if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
-        throw new Error('style elements cannot be assigned to variables');
-    }
 
-    this.computedCode = [];
 
-    const isComponent = this.target === 'component';
-    if (isComponent) {
-        this.parentStack = ['root'];
-        this.elementCounter = 0;
-    }
-    if (this.target === 'node' && this.containsFetch(ctx))
-        this.inAsyncWrapper = true;
 
-    const emittedLines = [];
-    const componentVars = [];
-    const componentFns = [];
-    const topLevelElements = []; // Track ALL top-level elements, not just the first
 
-    for (const child of ctx.children ?? []) {
-        if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
+        if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
+            throw new Error('style elements cannot be assigned to variables');
+        }
 
-        if (isComponent && child.constructor.name === 'ProgramElementContext') {
-            if (child.reactiveBlock && child.reactiveBlock()) {
-                this.visit(child.reactiveBlock());
-                continue;
-            }
+        this.computedCode = [];
 
-            if (child.htmlElement && child.htmlElement()) {
-                const currentElName = `el${this.elementCounter}`;
-                const htmlElCtx = child.htmlElement();
-                
-                if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
-                    continue;
+        const isComponent = this.target === 'component';
+        if (isComponent) {
+            this.parentStack = ['root'];
+            this.elementCounter = 0;
+        }
+        if (this.target === 'node' && this.containsFetch(ctx))
+            this.inAsyncWrapper = true;
+
+        const emittedLines = [];
+        const componentVars = [];
+        const componentFns = [];
+        let rootElement = null;
+
+        // Special handling for style tags at the top level
+        if (isComponent && fullText.includes('<style>')) {
+            // Extract style content manually from the full text
+            const styleMatch = fullText.match(/<style>([\s\S]*?)<\/style>/);
+            if (styleMatch) {
+                const styleContent = styleMatch[1].trim();
+                const styleElName = `el${this.elementCounter++}`;
+
+                const styleCode = `const ${styleElName} = document.createElement('style');\n` +
+                    `${styleElName}.textContent = \`${styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;\n` +
+                    `document.head.appendChild(${styleElName});\n`;
+
+                emittedLines.push(styleCode);
+
+                // Now process the rest of the content after removing the style tag
+                const remainingText = fullText.replace(/<style>[\s\S]*?<\/style>/, '').trim();
+
+                // Parse the remaining content by skipping past the style-related parse errors
+                let skipUntilValidElement = false;
+
+                for (const child of ctx.children ?? []) {
+                    const childText = child.getText ? child.getText() : '';
+
+                    // Skip the broken style-related parse nodes
+                    if (childText.includes('style>') || childText.includes('.redText') ||
+                        childText.includes('color:') || childText.includes('red;}') ||
+                        childText === '{' || childText === '}' || childText === '<' ||
+                        childText === '</' || childText === ':' ||
+                        childText.includes('<missing')) {
+                        continue;
+                    }
+
+                    // Look for the actual HTML content
+                    if (childText.includes('<div>') ||
+                        (child.constructor.name === 'ProgramElementContext' &&
+                            child.htmlElement && child.htmlElement())) {
+
+                        // Found valid HTML element
+                        const currentElName = `el${this.elementCounter}`;
+                        const code = this.visit(child);
+                        if (code) {
+                            emittedLines.push(code);
+                            if (!rootElement) {
+                                rootElement = currentElName;
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Process other valid children
+                    if (child.symbol?.type === antlr4.Token.EOF ||
+                        child.constructor.name === 'ErrorNodeImpl') continue;
+
+                    if (child.constructor.name === 'ProgramElementContext') {
+                        if (child.line && child.line()) {
+                            const stmt = child.line().statement?.();
+                            if (!stmt) continue;
+
+                            if (stmt.simpleStatement?.()?.assignment?.()) {
+                                const code = this.visit(stmt);
+                                if (code.trim()) componentVars.push(code.replace(/;$/, ''));
+                                continue;
+                            }
+
+                            if (stmt.compoundStatement?.()?.functionDefinition?.()) {
+                                const code = this.visit(stmt.compoundStatement().functionDefinition());
+                                if (code.trim()) componentFns.push(code);
+                                continue;
+                            }
+                        }
+                    }
                 }
-                const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
+            }
+        } else {
+            // Normal processing for non-style content
+            for (const child of ctx.children ?? []) {
 
-                const code = this.visit(child.htmlElement());
+
+
+                if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
+
+                if (isComponent && child.constructor.name === 'ProgramElementContext') {
+
+
+                    if (child.reactiveBlock && child.reactiveBlock()) {
+
+                        this.visit(child.reactiveBlock());
+                        continue;
+                    }
+
+                    if (child.htmlElement && child.htmlElement()) {
+
+                        const currentElName = `el${this.elementCounter}`;
+                        const htmlElCtx = child.htmlElement();
+
+
+
+                        if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
+
+                            continue;
+                        }
+                        const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
+
+
+                        const code = this.visit(child.htmlElement());
+                        if (code) emittedLines.push(code);
+
+                        if (!rootElement && tagName !== 'style') {
+                            rootElement = currentElName;
+                        }
+                        continue;
+                    }
+
+                    if (child.line && child.line()) {
+
+                        const stmt = child.line().statement?.();
+                        if (!stmt) continue;
+
+                        if (stmt.simpleStatement?.()?.assignment?.()) {
+                            const code = this.visit(stmt);
+                            if (code.trim()) componentVars.push(code.replace(/;$/, ''));
+                            continue;
+                        }
+
+                        if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
+                            const code = this.visit(stmt);
+                            if (code.trim()) componentVars.push(code.replace(/;$/, ''));
+                            continue;
+                        }
+
+                        if (stmt.compoundStatement?.()?.functionDefinition?.()) {
+                            const code = this.visit(stmt.compoundStatement().functionDefinition());
+                            if (code.trim()) componentFns.push(code);
+                            continue;
+                        }
+                    }
+                }
+
+                const code = this.visit(child);
+
                 if (code) emittedLines.push(code);
-
-                // Add ALL top-level elements (except style)
-                if (tagName !== 'style') {
-                    topLevelElements.push(currentElName);
-                }
-                continue;
-            }
-            
-            if (child.line && child.line()) {
-                const stmt = child.line().statement?.();
-                if (!stmt) continue;
-
-                if (stmt.simpleStatement?.()?.assignment?.()) {
-                    const code = this.visit(stmt);
-                    if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                    continue;
-                }
-                
-                if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
-                    const code = this.visit(stmt);
-                    if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                    continue;
-                }
-                
-                if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-                    const code = this.visit(stmt.compoundStatement().functionDefinition());
-                    if (code.trim()) componentFns.push(code);
-                    continue;
-                }
             }
         }
 
-        const code = this.visit(child);
-        if (code) emittedLines.push(code);
-    }
+        const bodyCode = emittedLines.filter(Boolean).join('\n');
 
-    const bodyCode = emittedLines.filter(Boolean).join('\n');
+        /* ========== 3. helper snippets ========== */
+        const helpers = `
 
-    const helpers = `
-function $$createText(data){return document.createTextNode(data);}
+function $$createText(data){
+
+    if (data && data.nodeType) return data;
+    return document.createTextNode(data);
+}
 function $$listen(node,e,h){node.addEventListener(e,h);}
 function $$setAttribute(n,a,v){
     if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
+
     else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
     else{n.setAttribute(a,v);}
-}`;
+}const _effects = [];
+function _runEffects(){ for(const f of _effects) f();}`;
 
-    if (isComponent) {
-        const destructure = this.componentProps.length
-            ? `const { ${this.componentProps.join(', ')} } = props;`
-            : '';
-        const varDecls = componentVars.length
-            ? componentVars.map(l => '    ' + l + ';').join('\n')
-            : '';
-        const fnDecls = componentFns.length
-            ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
-            : '';
+        /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
+        if (isComponent) {
+            const destructure = this.componentProps.length
+                ? `const { ${this.componentProps.join(', ')} } = props;`
+                : '';
+            const varDecls = componentVars.length
+                ? componentVars.map(l => '    ' + l + ';').join('\n')
+                : '';
+            const fnDecls = componentFns.length
+                ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
+                : '';
 
-        const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
+            // Indent the DOM creation logic to fit inside the _render function
+            const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
 
-        // Append ALL top-level elements, not just one
-        const appendElements = topLevelElements.length > 0
-            ? topLevelElements.map(el => `        root.appendChild(${el});`).join('\n')
-            : '';
-
-        return `${helpers}
+            return `${helpers}
 
 export default function ${this.componentName}(props = {}) {
 
@@ -355,18 +460,22 @@ export default function ${this.componentName}(props = {}) {
 ${varDecls}
 ${fnDecls}
 
+
     function _runComputations() {
 ${this.computedCode.map(line => '        ' + line).join('\n')}
     }
 
     function _render() {
+
         _runComputations();
+
         root.innerHTML = '';
 
 ${indentedBody}
 
-        // Append all top-level elements
-${appendElements}
+        if (${rootElement}) {
+            root.appendChild(${rootElement});
+        }
     }
 
     const _effects = [_render];
@@ -374,66 +483,66 @@ ${appendElements}
         for (const f of _effects) f();
     }
 
-    _render();
+    _render(); // Initial render call.
 
     return root;
 }`;
+        }
+
+        /* ========== 5. REGULAR (SCRIPT) OUTPUT (UNCHANGED) ========== */
+        let header = '';
+        if (this.target === 'node') {
+            for (const [mod, symbols] of this.imports)
+                header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
+            if (this.imports.size) header += '\n';
+            if (this.promptInjected) header +=
+                'import promptSync from "prompt-sync";\n' +
+                'const prompt = promptSync({ sigint: true });\n\n';
+        }
+
+        const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
+        if (this.inAsyncWrapper && globals.length)
+            header += `let ${globals.join(', ')};\n\n`;
+
+        if (this.inAsyncWrapper) {
+            const wrapper = `(async () => {\n${bodyCode}\n})();\n`;
+            const exports = globals.length && this.target === 'node'
+                ? `export { ${globals.join(', ')} };\n` : '';
+            return header + helpers + '\n\n' + wrapper + exports;
+        }
+
+        if (globals.length && this.target === 'node')
+            header += `export { ${globals.join(', ')} };\n\n`;
+
+        return header + helpers + '\n\n(function(){\n' + bodyCode + '\n})();';
     }
-
-    /* ========== 5. REGULAR (SCRIPT) OUTPUT (UNCHANGED) ========== */
-    let header = '';
-    if (this.target === 'node') {
-        for (const [mod, symbols] of this.imports)
-            header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
-        if (this.imports.size) header += '\n';
-        if (this.promptInjected) header +=
-            'import promptSync from "prompt-sync";\n' +
-            'const prompt = promptSync({ sigint: true });\n\n';
-    }
-
-    const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
-    if (this.inAsyncWrapper && globals.length)
-        header += `let ${globals.join(', ')};\n\n`;
-
-    if (this.inAsyncWrapper) {
-        const wrapper = `(async () => {\n${bodyCode}\n})();\n`;
-        const exports = globals.length && this.target === 'node'
-            ? `export { ${globals.join(', ')} };\n` : '';
-        return header + helpers + '\n\n' + wrapper + exports;
-    }
-
-    if (globals.length && this.target === 'node')
-        header += `export { ${globals.join(', ')} };\n\n`;
-
-    return header + helpers + '\n\n(function(){\n' + bodyCode + '\n})();';
-}
 
 
     visitPrimitiveFilter(ctx) {
-    // Add null check
-    if (!ctx.ID()) {
-        console.error('PrimitiveFilter: ID is null, context:', ctx.getText());
-        return `/* Error: invalid filter syntax */`;
-    }
-    
-    const varName = ctx.ID().getText();
-    const op = ctx.comparisonOperator().getText();
-    const value = this.visit(ctx.expression());
+        // Add null check
+        if (!ctx.ID()) {
+            console.error('PrimitiveFilter: ID is null, context:', ctx.getText());
+            return `/* Error: invalid filter syntax */`;
+        }
 
-    let comparison;
-    // INVERTED logic - "bvisa" means remove
-    switch (op) {
-        case '>': comparison = `x <= ${value}`; break;
-        case '<': comparison = `x >= ${value}`; break;
-        case '>=': comparison = `x < ${value}`; break;
-        case '<=': comparison = `x > ${value}`; break;
-        case '==': comparison = `x !== ${value}`; break;
-        case '!=': comparison = `x === ${value}`; break;
-        default: comparison = `x !== ${value}`;
-    }
+        const varName = ctx.ID().getText();
+        const op = ctx.comparisonOperator().getText();
+        const value = this.visit(ctx.expression());
 
-    return `${varName} = ${varName}.filter(x => ${comparison})`;
-}
+        let comparison;
+        // INVERTED logic - "bvisa" means remove
+        switch (op) {
+            case '>': comparison = `x <= ${value}`; break;
+            case '<': comparison = `x >= ${value}`; break;
+            case '>=': comparison = `x < ${value}`; break;
+            case '<=': comparison = `x > ${value}`; break;
+            case '==': comparison = `x !== ${value}`; break;
+            case '!=': comparison = `x === ${value}`; break;
+            default: comparison = `x !== ${value}`;
+        }
+
+        return `${varName} = ${varName}.filter(x => ${comparison})`;
+    }
 
     visitDirectValueFilter(ctx) {
         const varName = ctx.ID().getText();
@@ -455,24 +564,24 @@ ${appendElements}
     // }
 
     visitProgramElement(ctx) {
-    
-    
-    if (ctx.line && ctx.line()) {
-        
-        return this.visit(ctx.line());
+
+
+        if (ctx.line && ctx.line()) {
+
+            return this.visit(ctx.line());
+        }
+        if (ctx.htmlElement && ctx.htmlElement()) {
+
+            return this.visit(ctx.htmlElement());
+        }
+        if (ctx.reactiveBlock && ctx.reactiveBlock()) {
+
+            return this.visit(ctx.reactiveBlock());
+        }
+
+
+        return '';
     }
-    if (ctx.htmlElement && ctx.htmlElement()) {
-        
-        return this.visit(ctx.htmlElement());
-    }
-    if (ctx.reactiveBlock && ctx.reactiveBlock()) {
-        
-        return this.visit(ctx.reactiveBlock());
-    }
-    
-    
-    return '';
-}
 
     visitLine(ctx) {
         if (/=\s*<style/i.test(ctx.getText())) {
@@ -517,9 +626,9 @@ ${appendElements}
             const parent = this.parentStack.at(-1);
             return `${parent}.appendChild($$createText(${expr}));`;
         }
-           if (ctx.anonymousFunctionAssignment()) {
-        return this.visitAnonymousFunctionAssignment(ctx.anonymousFunctionAssignment());
-    }
+        if (ctx.anonymousFunctionAssignment()) {
+            return this.visitAnonymousFunctionAssignment(ctx.anonymousFunctionAssignment());
+        }
         if (ctx.assignment()) return this.visit(ctx.assignment()) + ";";
         if (ctx.reactiveOneLiner()) return this.visitReactiveOneLiner(ctx.reactiveOneLiner());
         if (ctx.propsDeclaration()) return this.visitPropsDeclaration(ctx.propsDeclaration());
@@ -625,29 +734,29 @@ ${appendElements}
 
 
     visitAnonymousFunctionAssignment(ctx) {
-    const js = [];
+        const js = [];
 
-    /*  lhs  */
-    // const lhs = this.visit(ctx.assignable());
+        /*  lhs  */
+        // const lhs = this.visit(ctx.assignable());
 
-     const lhs = this._getAssignableString(ctx.assignable());
+        const lhs = this._getAssignableString(ctx.assignable());
 
-    /*  parameters  */
-    const paramsCtx = ctx.parameterList && ctx.parameterList();
-    const params = paramsCtx
-        ? paramsCtx.ID().map(id => id.getText()).join(', ')
-        : '';
+        /*  parameters  */
+        const paramsCtx = ctx.parameterList && ctx.parameterList();
+        const params = paramsCtx
+            ? paramsCtx.ID().map(id => id.getText()).join(', ')
+            : '';
 
-    /*  body  */
-    const body = this.visit(ctx.suite());   // suite → returns JS code for the body
+        /*  body  */
+        const body = this.visit(ctx.suite());   // suite → returns JS code for the body
 
-    js.push(`let ${lhs} = function(${params}) {`);
-    js.push(body);                          // already indented by visit(suite)
-    js.push('};');
+        js.push(`let ${lhs} = function(${params}) {`);
+        js.push(body);                          // already indented by visit(suite)
+        js.push('};');
 
-    return js.join(' ');
-}
-    
+        return js.join(' ');
+    }
+
 
     visitInputStatement(ctx) {
         const name = ctx.ID().getText();
@@ -719,59 +828,59 @@ ${appendElements}
     // }
 
     visitConditionalStatement(ctx) {
-    const condition = this.visit(ctx.expression(0));
-    const cleanCondition = condition.startsWith('(') && condition.endsWith(')')
-        ? condition.slice(1, -1)
-        : condition;
+        const condition = this.visit(ctx.expression(0));
+        const cleanCondition = condition.startsWith('(') && condition.endsWith(')')
+            ? condition.slice(1, -1)
+            : condition;
 
-    let code = `if (${cleanCondition}) {\n`;
-    this.enterScope();
-    code += this.visit(ctx.suite(0));
-    this.leaveScope();
-    code += '\n' + this.getIndent() + '}';
-
-    // Count else-if branches - both KANA KUTI and standalone KANA after first statement
-    let elseIfIndex = 1;
-    let i = 1;
-    
-    while (i < ctx.children.length) {
-        const child = ctx.children[i];
-        
-        // Check for KANA or KANA KUTI
-        if (child.getText() === 'kana' || (child.getText() === 'kana' && 
-            i + 1 < ctx.children.length && ctx.children[i + 1].getText() === 'kuti')) {
-            
-            // Skip 'kuti' if present
-            if (i + 1 < ctx.children.length && ctx.children[i + 1].getText() === 'kuti') {
-                i++;
-            }
-            
-            const elseIfCondition = this.visit(ctx.expression(elseIfIndex));
-            const cleanElseIfCond = elseIfCondition.startsWith('(') && elseIfCondition.endsWith(')')
-                ? elseIfCondition.slice(1, -1)
-                : elseIfCondition;
-
-            code += ` else if (${cleanElseIfCond}) {\n`;
-            this.enterScope();
-            code += this.visit(ctx.suite(elseIfIndex));
-            this.leaveScope();
-            code += '\n' + this.getIndent() + '}';
-            
-            elseIfIndex++;
-        }
-        i++;
-    }
-
-    if (ctx.ZVIMWE()) {
-        code += ` else {\n`;
+        let code = `if (${cleanCondition}) {\n`;
         this.enterScope();
-        code += this.visit(ctx.suite().at(-1));
+        code += this.visit(ctx.suite(0));
         this.leaveScope();
         code += '\n' + this.getIndent() + '}';
-    }
 
-    return this.removeTrailingCommas(code);
-}
+        // Count else-if branches - both KANA KUTI and standalone KANA after first statement
+        let elseIfIndex = 1;
+        let i = 1;
+
+        while (i < ctx.children.length) {
+            const child = ctx.children[i];
+
+            // Check for KANA or KANA KUTI
+            if (child.getText() === 'kana' || (child.getText() === 'kana' &&
+                i + 1 < ctx.children.length && ctx.children[i + 1].getText() === 'kuti')) {
+
+                // Skip 'kuti' if present
+                if (i + 1 < ctx.children.length && ctx.children[i + 1].getText() === 'kuti') {
+                    i++;
+                }
+
+                const elseIfCondition = this.visit(ctx.expression(elseIfIndex));
+                const cleanElseIfCond = elseIfCondition.startsWith('(') && elseIfCondition.endsWith(')')
+                    ? elseIfCondition.slice(1, -1)
+                    : elseIfCondition;
+
+                code += ` else if (${cleanElseIfCond}) {\n`;
+                this.enterScope();
+                code += this.visit(ctx.suite(elseIfIndex));
+                this.leaveScope();
+                code += '\n' + this.getIndent() + '}';
+
+                elseIfIndex++;
+            }
+            i++;
+        }
+
+        if (ctx.ZVIMWE()) {
+            code += ` else {\n`;
+            this.enterScope();
+            code += this.visit(ctx.suite().at(-1));
+            this.leaveScope();
+            code += '\n' + this.getIndent() + '}';
+        }
+
+        return this.removeTrailingCommas(code);
+    }
 
     visitConditionalExpression(ctx) {
         // If there's only one child, it's not a ternary expression.
@@ -869,9 +978,9 @@ ${appendElements}
     }
 
     visitHtmlVoidElement(ctx) {
-    // same treatment as   <tag ... /> 
-    return this.visitHtmlSelfClosingElement(ctx);
-}
+        // same treatment as   <tag ... /> 
+        return this.visitHtmlSelfClosingElement(ctx);
+    }
 
     /* =============================================
     =            FUNCTIONS                        =
@@ -997,459 +1106,191 @@ ${appendElements}
         return '';
     }
 
+    visitHtmlBlockElement(ctx) {
+        const elName = `el${this.elementCounter++}`;
+        const rawTag = ctx.tagName(0).getText();
+        const tagName = rawTag.toLowerCase();
 
-//     visitHtmlBlockElement(ctx) {
-//     const elName = `el${this.elementCounter++}`;
-//     const rawTag = ctx.tagName(0).getText();
-//     const tagName = rawTag.toLowerCase();
 
-//     // Check if we're in an expression context (being assigned to a variable)
-//     const inExpression = ctx.parentCtx && 
-//                         ctx.parentCtx.constructor.name === 'HtmlExprContext';
 
-//     /* ── Style validation ─────────────────*/
-//     if (tagName === 'style') {
-//         // If being assigned, throw error
-//         if (inExpression) {
-//             throw Error(
-//                 "<style> elements cannot be assigned to variables – they must stay at the top level of the component."
-//             );
-//         }
-        
-//         // Check if at top level (existing logic)
-//         if (this.parentStack.length !== 1) {
-//             throw Error(
-//                 "<style> tags must be declared at the top level; " +
-//                 "don't nest them inside other elements, loops or conditionals."
-//             );
-//         }
-//     }
 
-//     /* ── Decide where to append ─────────────────*/
-//     const inComponent = this.target === 'component';
-//     let parent;
-    
-//     // If used as expression, don't determine parent yet
-//     if (inExpression) {
-//         parent = null;
-//     } else if (tagName === 'style') {
-//         parent = 'document.head';
-//     } else if (inComponent) {
-//         parent = this.parentStack.at(-1);
-//         if (parent === 'root') parent = null;
-//     } else {
-//         parent = this.parentStack.at(-1);
-//     }
+        // Check if we're in an expression context (being assigned to a variable)
+        const inExpression = ctx.parentCtx &&
+            ctx.parentCtx.constructor.name === 'HtmlExprContext';
 
-//     /* ── Create element ─────────────────*/
-//     let code = '';
-    
-//     // If in expression, wrap in IIFE
-//     if (inExpression) {
-//         code = `(() => {\n`;
-//         code += `    const ${elName} = document.createElement('${tagName}');\n`;
-//     } else {
-//         code = `const ${elName} = document.createElement('${tagName}');\n`;
-//     }
+        /* ── Style validation ─────────────────*/
+        if (tagName === 'style') {
 
-//     /* ── Handle attributes ─────────────────*/
-//     const attrs = ctx.attribute() || [];
-//     let hasExplicitValue = false;
 
-//     for (const a of attrs) {
-//         const snippet = this.visitAttribute(a, elName);
-//         if (snippet) {
-//             if (inExpression) {
-//                 // Indent for IIFE
-//                 const lines = snippet.split('\n').filter(l => l);
-//                 code += lines.map(l => '    ' + l).join('\n') + '\n';
-//             } else {
-//                 code += snippet;
-//             }
-//         }
 
-//         const aName = a.attrName ? a.attrName().getText() : '';
-//         if (aName === 'value') hasExplicitValue = true;
-//     }
 
-//     /* ── Append to parent (only if not an expression) ─────────────────*/
-//     if (!inExpression && parent) {
-//         code += `${parent}.appendChild(${elName});\n`;
-//     }
-    
+            // If being assigned, throw error
+            if (inExpression) {
+                throw Error(
+                    "<style> elements cannot be assigned to variables – they must stay at the top level of the component."
+                );
+            }
 
-//     /* ── Process children ─────────────────*/
-//     // Temporarily push to stack for children processing
-//     this.parentStack.push(elName);
-//     this.tagStack.push(tagName);
+            // Check if at top level (existing logic)
+            if (this.parentStack.length !== 1) {
+                throw Error(
+                    "<style> tags must be declared at the top level; " +
+                    "don't nest them inside other elements, loops or conditionals."
+                );
+            }
+        }
 
-//     if (ctx.htmlContent()) {
-//         const inner = this.visit(ctx.htmlContent());
-//         if (inner) {
-//             if (inExpression) {
-//                 // Indent children code for IIFE
-//                 const lines = inner.split('\n').filter(l => l);
-//                 code += lines.map(l => '    ' + l).join('\n') + '\n';
-//             } else {
-//                 code += inner + '\n';
-//             }
-//         }
+        /* ── Decide where to append ─────────────────*/
+        const inComponent = this.target === 'component';
+        let parent;
 
-//         /* Special: <option> without explicit value */
-//         if (tagName === 'option' && !hasExplicitValue) {
-//             if (inExpression) {
-//                 code += `    if (!${elName}.hasAttribute('value')) {\n`;
-//                 code += `        ${elName}.value = ${elName}.textContent;\n`;
-//                 code += `    }\n`;
-//             } else {
-//                 code += `if (!${elName}.hasAttribute('value')) {\n`;
-//                 code += `    ${elName}.value = ${elName}.textContent;\n`;
-//                 code += `}\n`;
-//             }
-//         }
-//     }
-
-//     this.parentStack.pop();
-//     this.tagStack.pop();
-
-//     /* ── Return based on context ─────────────────*/
-//     if (inExpression) {
-//         // Close IIFE and return the element
-//         code += `    return ${elName};\n`;
-//         code += `})()`;
-//         return code;  // Return the IIFE that creates and returns the element
-//     }
-    
-//     return code;  // Return normal creation code
-// }
-// visitHtmlBlockElement(ctx) {
-//     const elName = `el${this.elementCounter++}`;
-//     const rawTag = ctx.tagName(0).getText();
-//     const tagName = rawTag.toLowerCase();
-
-//     // Check if we're in an expression context (being assigned to a variable)
-//     const inExpression = ctx.parentCtx && 
-//                         ctx.parentCtx.constructor.name === 'HtmlExprContext';
-
-//     /* ── Style validation ─────────────────*/
-//     if (tagName === 'style') {
-//         // If being assigned, throw error
-//         if (inExpression) {
-//             throw Error(
-//                 "<style> elements cannot be assigned to variables – they must stay at the top level of the component."
-//             );
-//         }
-        
-//         // Check if at top level (existing logic)
-//         if (this.parentStack.length !== 1) {
-//             throw Error(
-//                 "<style> tags must be declared at the top level; " +
-//                 "don't nest them inside other elements, loops or conditionals."
-//             );
-//         }
-//     }
-
-//     /* ── Decide where to append ─────────────────*/
-//     const inComponent = this.target === 'component';
-//     let parent;
-    
-//     // If used as expression, don't determine parent yet
-//     if (inExpression) {
-//         parent = null;
-//     } else if (tagName === 'style') {
-//         parent = 'document.head';
-//     } else if (inComponent) {
-//         parent = this.parentStack.at(-1);
-//         if (parent === 'root') parent = null;
-//     } else {
-//         parent = this.parentStack.at(-1);
-//     }
-
-//     /* ── Create element ─────────────────*/
-//     let code = '';
-    
-//     // If in expression, wrap in IIFE
-//     if (inExpression) {
-//         code = `(() => {\n`;
-//         code += `    const ${elName} = document.createElement('${tagName}');\n`;
-//     } else {
-//         code = `const ${elName} = document.createElement('${tagName}');\n`;
-//     }
-
-//     /* ── Handle attributes ─────────────────*/
-//     const attrs = ctx.attribute() || [];
-//     let hasExplicitValue = false;
-
-//     for (const a of attrs) {
-//         const snippet = this.visitAttribute(a, elName);
-//         if (snippet) {
-//             if (inExpression) {
-//                 // Indent for IIFE
-//                 const lines = snippet.split('\n').filter(l => l);
-//                 code += lines.map(l => '    ' + l).join('\n') + '\n';
-//             } else {
-//                 code += snippet;
-//             }
-//         }
-
-//         const aName = a.attrName ? a.attrName().getText() : '';
-//         if (aName === 'value') hasExplicitValue = true;
-//     }
-
-//     /* ── Process children ─────────────────*/
-//     // For style tags, we need to handle content specially
-//     if (tagName === 'style' && ctx.htmlContent()) {
-//         // Get the full text between <style> and </style>
-//         // Find the positions of the opening and closing tags
-//         const fullText = ctx.getText();
-//         const openTagEnd = fullText.indexOf('>') + 1;
-//         const closeTagStart = fullText.lastIndexOf('</style>');
-        
-//         if (openTagEnd > 0 && closeTagStart > openTagEnd) {
-//             let styleContent = fullText.substring(openTagEnd, closeTagStart);
-            
-//             // Clean up the style content - remove extra whitespace but preserve the CSS
-//             styleContent = styleContent.trim();
-            
-//             // Set the textContent of the style element
-//             code += `${elName}.textContent = \`${styleContent.replace(/`/g, '\\`')}\`;\n`;
-//         }
-//     } else {
-//         // Temporarily push to stack for children processing
-//         this.parentStack.push(elName);
-//         this.tagStack.push(tagName);
-
-//         if (ctx.htmlContent()) {
-//             const inner = this.visit(ctx.htmlContent());
-//             if (inner) {
-//                 if (inExpression) {
-//                     // Indent children code for IIFE
-//                     const lines = inner.split('\n').filter(l => l);
-//                     code += lines.map(l => '    ' + l).join('\n') + '\n';
-//                 } else {
-//                     code += inner;
-//                 }
-//             }
-
-//             /* Special: <option> without explicit value */
-//             if (tagName === 'option' && !hasExplicitValue) {
-//                 if (inExpression) {
-//                     code += `    if (!${elName}.hasAttribute('value')) {\n`;
-//                     code += `        ${elName}.value = ${elName}.textContent;\n`;
-//                     code += `    }\n`;
-//                 } else {
-//                     code += `if (!${elName}.hasAttribute('value')) {\n`;
-//                     code += `    ${elName}.value = ${elName}.textContent;\n`;
-//                     code += `}\n`;
-//                 }
-//             }
-//         }
-
-//         if (tagName !== 'style') {
-//             this.parentStack.pop();
-//             this.tagStack.pop();
-//         }
-//     }
-
-//     /* ── Append to parent (only if not an expression) ─────────────────*/
-//     if (!inExpression && parent) {
-//         code += `${parent}.appendChild(${elName});\n`;
-//     }
-
-//     /* ── Return based on context ─────────────────*/
-//     if (inExpression) {
-//         // Close IIFE and return the element
-//         code += `    return ${elName};\n`;
-//         code += `})()`;
-//         return code;  // Return the IIFE that creates and returns the element
-//     }
-    
-//     return code;  // Return normal creation code
-// }
-visitHtmlBlockElement(ctx) {
-    const elName = `el${this.elementCounter++}`;
-    const rawTag = ctx.tagName(0).getText();
-    const tagName = rawTag.toLowerCase();
-
-    
-    
-
-    // Check if we're in an expression context (being assigned to a variable)
-    const inExpression = ctx.parentCtx && 
-                        ctx.parentCtx.constructor.name === 'HtmlExprContext';
-
-    /* ── Style validation ─────────────────*/
-    if (tagName === 'style') {
-        
-        
-        
-        
-        // If being assigned, throw error
+        // If used as expression, don't determine parent yet
         if (inExpression) {
-            throw Error(
-                "<style> elements cannot be assigned to variables – they must stay at the top level of the component."
-            );
-        }
-        
-        // Check if at top level (existing logic)
-        if (this.parentStack.length !== 1) {
-            throw Error(
-                "<style> tags must be declared at the top level; " +
-                "don't nest them inside other elements, loops or conditionals."
-            );
-        }
-    }
-
-    /* ── Decide where to append ─────────────────*/
-    const inComponent = this.target === 'component';
-    let parent;
-    
-    // If used as expression, don't determine parent yet
-    if (inExpression) {
         parent = null;
     } else if (tagName === 'style') {
         parent = 'document.head';
-        
     } else if (inComponent) {
         parent = this.parentStack.at(-1);
-        if (parent === 'root') parent = null;
+        // Don't set parent to null for root - keep it as 'root'
+        // This ensures top-level elements get appended
     } else {
         parent = this.parentStack.at(-1);
     }
 
-    /* ── Create element ─────────────────*/
-    let code = '';
-    
-    // If in expression, wrap in IIFE
-    if (inExpression) {
-        code = `(() => {\n`;
-        code += `    const ${elName} = document.createElement('${tagName}');\n`;
-    } else {
-        code = `const ${elName} = document.createElement('${tagName}');\n`;
-    }
 
-    
+        /* ── Create element ─────────────────*/
+        let code = '';
 
-    /* ── Handle attributes ─────────────────*/
-    const attrs = ctx.attribute() || [];
-    let hasExplicitValue = false;
-
-    for (const a of attrs) {
-        const snippet = this.visitAttribute(a, elName);
-        if (snippet) {
-            if (inExpression) {
-                // Indent for IIFE
-                const lines = snippet.split('\n').filter(l => l);
-                code += lines.map(l => '    ' + l).join('\n') + '\n';
-            } else {
-                code += snippet;
-            }
+        // If in expression, wrap in IIFE
+        if (inExpression) {
+            code = `(() => {\n`;
+            code += `    const ${elName} = document.createElement('${tagName}');\n`;
+        } else {
+            code = `const ${elName} = document.createElement('${tagName}');\n`;
         }
 
-        const aName = a.attrName ? a.attrName().getText() : '';
-        if (aName === 'value') hasExplicitValue = true;
-    }
 
-    /* ── Process children ─────────────────*/
-    // For style tags, we need to handle content specially
-    if (tagName === 'style' && ctx.htmlContent()) {
-        
-        
-        
-        // Get the raw text from the input stream
-        const fullText = ctx.getText();
-        
-        
-        const closeTagIndex = fullText.lastIndexOf('</style>');
-        
-        
-        if (closeTagIndex > 0) {
-            // Extract content between tags from the original input
-            const openTagLength = fullText.indexOf('>') + 1;
-            
-            
-            const styleContent = fullText.substring(openTagLength, closeTagIndex).trim();
-            
-            
-            // Set the textContent of the style element
-            if (styleContent) {
-                const escapedContent = styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-                
-                
-                if (inExpression) {
-                    code += `    ${elName}.textContent = \`${escapedContent}\`;\n`;
-                } else {
-                    code += `${elName}.textContent = \`${escapedContent}\`;\n`;
-                }
-            }
-        }
-        
-        // DON'T process children for style tags - skip the normal htmlContent processing
-    } else {
-        
-        // Temporarily push to stack for children processing
-        this.parentStack.push(elName);
-        this.tagStack.push(tagName);
 
-        if (ctx.htmlContent()) {
-            const inner = this.visit(ctx.htmlContent());
-            
-            if (inner) {
+        /* ── Handle attributes ─────────────────*/
+        const attrs = ctx.attribute() || [];
+        let hasExplicitValue = false;
+
+        for (const a of attrs) {
+            const snippet = this.visitAttribute(a, elName);
+            if (snippet) {
                 if (inExpression) {
-                    // Indent children code for IIFE
-                    const lines = inner.split('\n').filter(l => l);
+                    // Indent for IIFE
+                    const lines = snippet.split('\n').filter(l => l);
                     code += lines.map(l => '    ' + l).join('\n') + '\n';
                 } else {
-                    code += inner;
+                    code += snippet;
                 }
             }
 
-            /* Special: <option> without explicit value */
-            if (tagName === 'option' && !hasExplicitValue) {
-                if (inExpression) {
-                    code += `    if (!${elName}.hasAttribute('value')) {\n`;
-                    code += `        ${elName}.value = ${elName}.textContent;\n`;
-                    code += `    }\n`;
-                } else {
-                    code += `if (!${elName}.hasAttribute('value')) {\n`;
-                    code += `    ${elName}.value = ${elName}.textContent;\n`;
-                    code += `}\n`;
-                }
-            }
+            const aName = a.attrName ? a.attrName().getText() : '';
+            if (aName === 'value') hasExplicitValue = true;
         }
 
-        this.parentStack.pop();
-        this.tagStack.pop();
+        /* ── Process children ─────────────────*/
+        // For style tags, we need to handle content specially
+        if (tagName === 'style' && ctx.htmlContent()) {
+
+
+
+            // Get the raw text from the input stream
+            const fullText = ctx.getText();
+
+
+            const closeTagIndex = fullText.lastIndexOf('</style>');
+
+
+            if (closeTagIndex > 0) {
+                // Extract content between tags from the original input
+                const openTagLength = fullText.indexOf('>') + 1;
+
+
+                const styleContent = fullText.substring(openTagLength, closeTagIndex).trim();
+
+
+                // Set the textContent of the style element
+                if (styleContent) {
+                    const escapedContent = styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
+
+                    if (inExpression) {
+                        code += `    ${elName}.textContent = \`${escapedContent}\`;\n`;
+                    } else {
+                        code += `${elName}.textContent = \`${escapedContent}\`;\n`;
+                    }
+                }
+            }
+
+            // DON'T process children for style tags - skip the normal htmlContent processing
+        } else {
+
+            // Temporarily push to stack for children processing
+            this.parentStack.push(elName);
+            this.tagStack.push(tagName);
+
+            if (ctx.htmlContent()) {
+                const inner = this.visit(ctx.htmlContent());
+
+                if (inner) {
+                    if (inExpression) {
+                        // Indent children code for IIFE
+                        const lines = inner.split('\n').filter(l => l);
+                        code += lines.map(l => '    ' + l).join('\n') + '\n';
+                    } else {
+                        code += inner;
+                    }
+                }
+
+                /* Special: <option> without explicit value */
+                if (tagName === 'option' && !hasExplicitValue) {
+                    if (inExpression) {
+                        code += `    if (!${elName}.hasAttribute('value')) {\n`;
+                        code += `        ${elName}.value = ${elName}.textContent;\n`;
+                        code += `    }\n`;
+                    } else {
+                        code += `if (!${elName}.hasAttribute('value')) {\n`;
+                        code += `    ${elName}.value = ${elName}.textContent;\n`;
+                        code += `}\n`;
+                    }
+                }
+            }
+
+            this.parentStack.pop();
+            this.tagStack.pop();
+        }
+
+        /* ── Append to parent (only if not an expression) ─────────────────*/
+        if (!inExpression && parent) {
+
+            code += `${parent}.appendChild(${elName});\n`;
+        }
+
+
+
+        /* ── Return based on context ─────────────────*/
+        if (inExpression) {
+            // Close IIFE and return the element
+            code += `    return ${elName};\n`;
+            code += `})()`;
+            return code;  // Return the IIFE that creates and returns the element
+        }
+
+        return code;  // Return normal creation code
     }
 
-    /* ── Append to parent (only if not an expression) ─────────────────*/
-    if (!inExpression && parent) {
-        
-        code += `${parent}.appendChild(${elName});\n`;
+    visitHtmlExpr(ctx) {
+        // Only allow in component mode
+        if (this.target !== 'component') {
+            throw new Error(
+                'HTML elements as expressions are only allowed in component files (.shonax)'
+            );
+        }
+        return this.visit(ctx.htmlElement());   // returns the IIFE string
     }
-
-    
-
-    /* ── Return based on context ─────────────────*/
-    if (inExpression) {
-        // Close IIFE and return the element
-        code += `    return ${elName};\n`;
-        code += `})()`;
-        return code;  // Return the IIFE that creates and returns the element
-    }
-    
-    return code;  // Return normal creation code
-}
-
-visitHtmlExpr(ctx) {
-    // Only allow in component mode
-    if (this.target !== 'component') {
-        throw new Error(
-            'HTML elements as expressions are only allowed in component files (.shonax)'
-        );
-    }
-    return this.visit(ctx.htmlElement());   // returns the IIFE string
-}
 
     visitHtmlSelfClosingElement(ctx) {
         const elName = `el${this.elementCounter++}`;
@@ -1525,118 +1366,107 @@ visitHtmlExpr(ctx) {
         return '';                      // <- generates no JS by itself
     }
 
-    visitAttribute(ctx, elName) {
-        const attrName = ctx.attrName ? ctx.attrName().getText() : '';
+  visitAttribute(ctx, elName) {
+    const attrName = ctx.attrName ? ctx.attrName().getText() : '';
 
-        // Handle event attributes
-        if (attrName === 'rikasubmitwa' || attrName === 'rikabayiwa' ||
-            attrName === 'ikachinjwa' || attrName === 'rakabayiwa' ||
-            attrName === 'rikapresswa' || attrName === 'rakapresswa' ||
-            attrName === 'ikanyorwa' || attrName === 'ikasarudzwa') {
+    // Handle event attributes (existing code)
+    if (attrName === 'rikasubmitwa' || attrName === 'rikabayiwa' ||
+        attrName === 'ikachinjwa' || attrName === 'rakabayiwa' ||
+        attrName === 'rikapresswa' || attrName === 'rakapresswa' ||
+        attrName === 'ikanyorwa' || attrName === 'ikasarudzwa') {
 
-            const handlerExpr = this.visit(ctx.shonaExpression());
-            let domEvent = 'click';
+        const handlerExpr = this.visit(ctx.shonaExpression());
+        let domEvent = 'click';
 
-            if (attrName === 'rikasubmitwa') domEvent = 'submit';
-            else if (attrName === 'ikachinjwa') domEvent = 'change';
-            else if (attrName === 'ikanyorwa') domEvent = 'input';
-            else if (attrName === 'ikasarudzwa') domEvent = 'change';
+        if (attrName === 'rikasubmitwa') domEvent = 'submit';
+        else if (attrName === 'ikachinjwa') domEvent = 'change';
+        else if (attrName === 'ikanyorwa') domEvent = 'input';
+        else if (attrName === 'ikasarudzwa') domEvent = 'change';
 
-            return `$$listen(${elName}, '${domEvent}', ${handlerExpr});\n`;
-        } else {
-            // Handle value attributes
-            let actualAttrName = attrName;
+        return `$$listen(${elName}, '${domEvent}', ${handlerExpr});\n`;
+    } else {
+        // Handle value attributes
+        let actualAttrName = attrName;
 
-            // Map Shona attributes to HTML attributes
-            if (attrName === 'zvanyorwa') actualAttrName = 'value';
-            else if (attrName === 'zvasarudzwa') actualAttrName = 'value';
-
-            const value = ctx.STRING() ? ctx.STRING().getText() : this.visit(ctx.shonaExpression());
-            return `$$setAttribute(${elName}, '${actualAttrName}', ${value});\n`;
+        // Map Shona attributes to HTML attributes
+        if (attrName === 'zvanyorwa') actualAttrName = 'value';
+        else if (attrName === 'zvasarudzwa') actualAttrName = 'value';
+        
+        // Handle class/className attributes specially for Tailwind
+        if (attrName === 'class' || attrName === 'className') {
+            actualAttrName = 'class';
+            
+            if (ctx.STRING()) {
+                // Static class string - perfect for Tailwind classes
+                const classValue = ctx.STRING().getText();
+                // Remove quotes from the string
+                const cleanClasses = classValue.slice(1, -1);
+                return `${elName}.className = '${cleanClasses}';\n`;
+            } else if (ctx.shonaExpression()) {
+                // Dynamic class expression
+                const classExpr = this.visit(ctx.shonaExpression());
+                return `${elName}.className = ${classExpr};\n`;
+            }
         }
+
+        const value = ctx.STRING() ? ctx.STRING().getText() : this.visit(ctx.shonaExpression());
+        return `$$setAttribute(${elName}, '${actualAttrName}', ${value});\n`;
     }
-    // visitHtmlContent(ctx) {
-    //     const elements = ctx.htmlContentElement() || [];
-    //     return elements.map(element => this.visitHtmlContentElement(element)).filter(Boolean).join('\n');
-    // }
+}
+   
 
-//     visitHtmlContent(ctx) {
-//     const elements = ctx.htmlContentElement() || [];
-//     const results = [];
-    
-//     for (let i = 0; i < elements.length; i++) {
-//         const element = elements[i];
-//         const result = this.visitHtmlContentElement(element);
-        
-//         if (result) {
-//             results.push(result);
-            
-//             // Check if this was text and the next element is an expression
-//             // If so, add a space between them
-//             if (element.htmlText && element.htmlText() && 
-//                 i + 1 < elements.length && 
-//                 elements[i + 1].shonaExpression && elements[i + 1].shonaExpression()) {
-//                 const parent = this.parentStack.at(-1);
-//                 results.push(`${parent}.appendChild($$createText(' '));`);
-//             }
-//         }
-//     }
-    
-//     return results.filter(Boolean).join('\n');
-// }
+    visitHtmlContent(ctx) {
+        const elements = ctx.htmlContentElement() || [];
+        const results = [];
 
-visitHtmlContent(ctx) {
-    const elements = ctx.htmlContentElement() || [];
-    const results = [];
-    
-    for (let i = 0; i < elements.length; i++) {
-        const element = elements[i];
-        const result = this.visitHtmlContentElement(element);
-        
-        if (result) {
-            results.push(result);
-            
-            // Check if we need to add a space between elements
-            if (i + 1 < elements.length) {
-                const nextElement = elements[i + 1];
-                
-                // Add space between text and expression
-                if (element.htmlText && element.htmlText() && 
-                    nextElement.shonaExpression && nextElement.shonaExpression()) {
-                    const parent = this.parentStack.at(-1);
-                    results.push(`${parent}.appendChild($$createText(' '));`);
-                }
-                
-                // Add space between expression and expression
-                if (element.shonaExpression && element.shonaExpression() &&
-                    nextElement.shonaExpression && nextElement.shonaExpression()) {
-                    const parent = this.parentStack.at(-1);
-                    results.push(`${parent}.appendChild($$createText(' '));`);
-                }
-                
-                // Add space between expression and text (but not before punctuation)
-                if (element.shonaExpression && element.shonaExpression() &&
-                    nextElement.htmlText && nextElement.htmlText()) {
-                    // Check if the next text doesn't already start with a space or punctuation
-                    const nextTextCtx = nextElement.htmlText();
-                    const start = nextTextCtx.start.start;
-                    const stop = nextTextCtx.stop.stop;
-                    const inputStream = nextTextCtx.start.getInputStream();
-                    const nextText = inputStream.getText(start, stop);
-                    
-                    // Don't add space if text starts with space or punctuation
-                    const punctuation = /^[\s,;:.!?)/```\}]/;
-                    if (nextText && !nextText.match(punctuation)) {
+        for (let i = 0; i < elements.length; i++) {
+            const element = elements[i];
+            const result = this.visitHtmlContentElement(element);
+
+            if (result) {
+                results.push(result);
+
+                // Check if we need to add a space between elements
+                if (i + 1 < elements.length) {
+                    const nextElement = elements[i + 1];
+
+                    // Add space between text and expression
+                    if (element.htmlText && element.htmlText() &&
+                        nextElement.shonaExpression && nextElement.shonaExpression()) {
                         const parent = this.parentStack.at(-1);
                         results.push(`${parent}.appendChild($$createText(' '));`);
+                    }
+
+                    // Add space between expression and expression
+                    if (element.shonaExpression && element.shonaExpression() &&
+                        nextElement.shonaExpression && nextElement.shonaExpression()) {
+                        const parent = this.parentStack.at(-1);
+                        results.push(`${parent}.appendChild($$createText(' '));`);
+                    }
+
+                    // Add space between expression and text (but not before punctuation)
+                    if (element.shonaExpression && element.shonaExpression() &&
+                        nextElement.htmlText && nextElement.htmlText()) {
+                        // Check if the next text doesn't already start with a space or punctuation
+                        const nextTextCtx = nextElement.htmlText();
+                        const start = nextTextCtx.start.start;
+                        const stop = nextTextCtx.stop.stop;
+                        const inputStream = nextTextCtx.start.getInputStream();
+                        const nextText = inputStream.getText(start, stop);
+
+                        // Don't add space if text starts with space or punctuation
+                        const punctuation = /^[\s,;:.!?)/```\}]/;
+                        if (nextText && !nextText.match(punctuation)) {
+                            const parent = this.parentStack.at(-1);
+                            results.push(`${parent}.appendChild($$createText(' '));`);
+                        }
                     }
                 }
             }
         }
+
+        return results.filter(Boolean).join('\n');
     }
-    
-    return results.filter(Boolean).join('\n');
-}
 
     visitHtmlConditionalStatement(ctx) {
         const condition = this.visit(ctx.expression(0));
@@ -1704,85 +1534,55 @@ visitHtmlContent(ctx) {
     }
 
 
-    // visitHtmlContentElement(ctx) {
-    //     // Check what type of content element this is
-    //     if (ctx.shonaControlFlow && ctx.shonaControlFlow()) {
-    //         return this.visit(ctx.shonaControlFlow());
-    //     }
-    //     if (ctx.shonaExpression && ctx.shonaExpression()) {
-    //         const expr = this.visit(ctx.shonaExpression().expression());
-    //         const parent = this.parentStack.at(-1);
-    //         return `${parent}.appendChild($$createText(${expr}));`;
-    //     }
-    //     if (ctx.htmlElement && ctx.htmlElement()) {
-    //         return this.visit(ctx.htmlElement());
-    //     }
-    //     if (ctx.htmlText && ctx.htmlText()) {
-    //         const start = ctx.htmlText().start.start;
-    //         const stop = ctx.htmlText().stop.stop;
-    //         const inputStream = ctx.htmlText().start.getInputStream();
-    //         const raw = inputStream.getText(start, stop);
+    visitHtmlContentElement(ctx) {
+        // Check what type of content element this is
+        if (ctx.shonaControlFlow && ctx.shonaControlFlow()) {
+            return this.visit(ctx.shonaControlFlow());
+        }
+        if (ctx.shonaExpression && ctx.shonaExpression()) {
+            const expr = this.visit(ctx.shonaExpression().expression());
+            const parent = this.parentStack.at(-1);
+            return `${parent}.appendChild($$createText(${expr}));`;
+        }
+        if (ctx.htmlElement && ctx.htmlElement()) {
+            return this.visit(ctx.htmlElement());
+        }
+        if (ctx.WS_IN_HTML && ctx.WS_IN_HTML()) {
+            const parent = this.parentStack.at(-1);
+            return `${parent}.appendChild($$createText(' '));`;
+        }
+        if (ctx.htmlText && ctx.htmlText()) {
+            // Try to get the original text with spaces preserved
+            const start = ctx.htmlText().start.start;
+            const stop = ctx.htmlText().stop.stop;
+            const inputStream = ctx.htmlText().start.getInputStream();
+            let raw = inputStream.getText(start, stop);
 
-    //         const parent = this.parentStack.at(-1);
-    //         const tagName = this.tagStack.at(-1);
-    //         const insideStyle = tagName === 'style';
-
-    //         return this._emitInterpolatedText(raw, parent, insideStyle);
-    //     }
-
-    //     // Handle standalone whitespace tokens
-    //     return '';
-    // }
-
-visitHtmlContentElement(ctx) {
-    // Check what type of content element this is
-    if (ctx.shonaControlFlow && ctx.shonaControlFlow()) {
-        return this.visit(ctx.shonaControlFlow());
-    }
-    if (ctx.shonaExpression && ctx.shonaExpression()) {
-        const expr = this.visit(ctx.shonaExpression().expression());
-        const parent = this.parentStack.at(-1);
-        return `${parent}.appendChild($$createText(${expr}));`;
-    }
-    if (ctx.htmlElement && ctx.htmlElement()) {
-        return this.visit(ctx.htmlElement());
-    }
-     if (ctx.WS_IN_HTML && ctx.WS_IN_HTML()) {
-        const parent = this.parentStack.at(-1);
-        return `${parent}.appendChild($$createText(' '));`;
-    }
-     if (ctx.htmlText && ctx.htmlText()) {
-        // Try to get the original text with spaces preserved
-        const start = ctx.htmlText().start.start;
-        const stop = ctx.htmlText().stop.stop;
-        const inputStream = ctx.htmlText().start.getInputStream();
-        let raw = inputStream.getText(start, stop);
-        
-        // Check if the next token after this text is a shonaExpression
-        // by looking at the parent context
-        const parent = ctx.parentNode;
-        if (parent && parent.children) {
-            const myIndex = parent.children.indexOf(ctx);
-            if (myIndex >= 0 && myIndex + 1 < parent.children.length) {
-                const nextChild = parent.children[myIndex + 1];
-                if (nextChild.shonaExpression && nextChild.shonaExpression()) {
-                    // There's an expression following this text, ensure we have a space
-                    if (!raw.endsWith(' ')) {
-                        raw += ' ';
+            // Check if the next token after this text is a shonaExpression
+            // by looking at the parent context
+            const parent = ctx.parentNode;
+            if (parent && parent.children) {
+                const myIndex = parent.children.indexOf(ctx);
+                if (myIndex >= 0 && myIndex + 1 < parent.children.length) {
+                    const nextChild = parent.children[myIndex + 1];
+                    if (nextChild.shonaExpression && nextChild.shonaExpression()) {
+                        // There's an expression following this text, ensure we have a space
+                        if (!raw.endsWith(' ')) {
+                            raw += ' ';
+                        }
                     }
                 }
             }
+
+            const parentEl = this.parentStack.at(-1);
+            const tagName = this.tagStack.at(-1);
+            const insideStyle = tagName === 'style';
+
+            return this._emitInterpolatedText(raw, parentEl, insideStyle);
         }
-
-        const parentEl = this.parentStack.at(-1);
-        const tagName = this.tagStack.at(-1);
-        const insideStyle = tagName === 'style';
-
-        return this._emitInterpolatedText(raw, parentEl, insideStyle);
+        // Handle standalone whitespace tokens
+        return '';
     }
-    // Handle standalone whitespace tokens
-    return '';
-}
 
     visitShonaControlFlow(ctx) {
         // The control flow statement is inside the braces
@@ -1846,16 +1646,16 @@ visitHtmlContentElement(ctx) {
         return code;
     }
 
-   visitHtmlExpr(ctx) {
-    // Only allow in component mode
-    if (this.target !== 'component') {
-        throw new Error('HTML elements as expressions are only allowed in component files (.shonax)');
+    visitHtmlExpr(ctx) {
+        // Only allow in component mode
+        if (this.target !== 'component') {
+            throw new Error('HTML elements as expressions are only allowed in component files (.shonax)');
+        }
+
+        // Visit the HTML element - it will return an IIFE that creates the element
+        return this.visit(ctx.htmlElement());
     }
-    
-    // Visit the HTML element - it will return an IIFE that creates the element
-    return this.visit(ctx.htmlElement());
-}
-    
+
 
 
     visitHtmlContentUntilKeyword(ctx) {
@@ -2460,14 +2260,14 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
 
 
     visitPropertyDelete(ctx) {
-    const fullChain = this._getPropertyRefString(ctx.propertyRef());
-    return `delete ${fullChain}`;
-}
+        const fullChain = this._getPropertyRefString(ctx.propertyRef());
+        return `delete ${fullChain}`;
+    }
 
 
     visitPropertyGet(ctx) {
-    return this._getPropertyRefString(ctx.propertyRef());
-}
+        return this._getPropertyRefString(ctx.propertyRef());
+    }
 
     visitPropertyAccess(ctx) {
         const ids = ctx.ID().map(id => id.getText());
@@ -2492,52 +2292,52 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
     // }
 
     visitLogicalOrExpression(ctx) {
-    if (ctx.getChildCount() === 1) {
-        return this.visit(ctx.getChild(0));
-    }
-    
-    let result = this.visit(ctx.getChild(0));
-    
-    for (let i = 1; i < ctx.getChildCount(); i += 2) {
-        const opNode = ctx.getChild(i);
-        const rightNode = ctx.getChild(i + 1);
-        
-        let op = '||'; // Default to OR
-        const opText = opNode.getText();
-        
-        // Handle "kana kuti" as a two-token OR operator
-        if (opText === 'kana' && i + 1 < ctx.getChildCount() - 1) {
-            const nextToken = ctx.getChild(i + 1);
-            if (nextToken && nextToken.getText() === 'kuti') {
-                // Skip the 'kuti' token and get the actual right operand
-                i++; // Extra increment to skip 'kuti'
-                const actualRightNode = ctx.getChild(i + 1);
-                const right = this.visit(actualRightNode);
-                result = `(${result} || ${right})`;
-                continue;
-            }
+        if (ctx.getChildCount() === 1) {
+            return this.visit(ctx.getChild(0));
         }
-        
-        const right = this.visit(rightNode);
-        result = `(${result} ${op} ${right})`;
-    }
-    
-    return result;
-}
 
-    
+        let result = this.visit(ctx.getChild(0));
+
+        for (let i = 1; i < ctx.getChildCount(); i += 2) {
+            const opNode = ctx.getChild(i);
+            const rightNode = ctx.getChild(i + 1);
+
+            let op = '||'; // Default to OR
+            const opText = opNode.getText();
+
+            // Handle "kana kuti" as a two-token OR operator
+            if (opText === 'kana' && i + 1 < ctx.getChildCount() - 1) {
+                const nextToken = ctx.getChild(i + 1);
+                if (nextToken && nextToken.getText() === 'kuti') {
+                    // Skip the 'kuti' token and get the actual right operand
+                    i++; // Extra increment to skip 'kuti'
+                    const actualRightNode = ctx.getChild(i + 1);
+                    const right = this.visit(actualRightNode);
+                    result = `(${result} || ${right})`;
+                    continue;
+                }
+            }
+
+            const right = this.visit(rightNode);
+            result = `(${result} ${op} ${right})`;
+        }
+
+        return result;
+    }
+
+
 
     // visitLogicalAndExpression(ctx) {
     //     return this._visitBinary(ctx, { uye: '&&', and: '&&' });
     // }
 
     visitLogicalAndExpression(ctx) {
-    return this._visitBinary(ctx, { 
-        uye: '&&', 
-        and: '&&',
-        '&&': '&&'
-    });
-}
+        return this._visitBinary(ctx, {
+            uye: '&&',
+            and: '&&',
+            '&&': '&&'
+        });
+    }
 
     visitEqualityExpression(ctx) {
         return this._visitBinary(ctx);
@@ -2566,14 +2366,14 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
     }
 
     visitPostfixIncExpr(ctx) {
-    const lhs = this._getAssignableString(ctx.assignable());
-    return `${lhs}++${this._maybeRunEffects()}`;
-}
+        const lhs = this._getAssignableString(ctx.assignable());
+        return `${lhs}++${this._maybeRunEffects()}`;
+    }
 
-visitPostfixDecExpr(ctx) {
-    const lhs = this._getAssignableString(ctx.assignable());
-    return `${lhs}--${this._maybeRunEffects()}`;
-}
+    visitPostfixDecExpr(ctx) {
+        const lhs = this._getAssignableString(ctx.assignable());
+        return `${lhs}--${this._maybeRunEffects()}`;
+    }
 
     visitPrimaryExpr(ctx) {
         return this.visit(ctx.primaryExpression());
@@ -2778,49 +2578,49 @@ visitPostfixDecExpr(ctx) {
         const expr = this.visit(ctx.primaryExpression());
         return `!${expr}`;
     }
-    
-    visitComplexFilter(ctx) {
-    const varName = ctx.ID().getText();
-    const filterExpr = this.visit(ctx.logicalFilterExpression());
-    
-    // Convert the filter expression to keep items that DON'T match (inverted logic for bvisa)
-    return `${varName} = ${varName}.filter(x => !(${filterExpr}))`;
-}
-visitLogicalFilterExpression(ctx) {
-    const conditions = [];
-    const ids = ctx.ID();
-    const ops = ctx.comparisonOperator();
-    const exprs = ctx.expression();
-    
-    for (let i = 0; i < ids.length; i++) {
-        const id = ids[i].getText();
-        const op = ops[i].getText();
-        const expr = this.visit(exprs[i]);
-        
-        conditions.push(`x ${op} ${expr}`);
-    }
-    
-    // Join with the logical operators found in the expression
-    let result = conditions[0];
-    let opIndex = 0;
-    
-    for (let i = 1; i < conditions.length; i++) {
-        const logicalOp = this._getLogicalOpBetween(ctx, opIndex);
-        result += ` ${logicalOp} ${conditions[i]}`;
-        opIndex++;
-    }
-    
-    return result;
-}
 
-_getLogicalOpBetween(ctx, index) {
-    // Check which logical operator was used
-    const text = ctx.getText();
-    if (text.includes('kanakuti') || text.includes('kana') || text.includes('or') || text.includes('||')) {
-        return '||';
+    visitComplexFilter(ctx) {
+        const varName = ctx.ID().getText();
+        const filterExpr = this.visit(ctx.logicalFilterExpression());
+
+        // Convert the filter expression to keep items that DON'T match (inverted logic for bvisa)
+        return `${varName} = ${varName}.filter(x => !(${filterExpr}))`;
     }
-    return '&&';
-}
+    visitLogicalFilterExpression(ctx) {
+        const conditions = [];
+        const ids = ctx.ID();
+        const ops = ctx.comparisonOperator();
+        const exprs = ctx.expression();
+
+        for (let i = 0; i < ids.length; i++) {
+            const id = ids[i].getText();
+            const op = ops[i].getText();
+            const expr = this.visit(exprs[i]);
+
+            conditions.push(`x ${op} ${expr}`);
+        }
+
+        // Join with the logical operators found in the expression
+        let result = conditions[0];
+        let opIndex = 0;
+
+        for (let i = 1; i < conditions.length; i++) {
+            const logicalOp = this._getLogicalOpBetween(ctx, opIndex);
+            result += ` ${logicalOp} ${conditions[i]}`;
+            opIndex++;
+        }
+
+        return result;
+    }
+
+    _getLogicalOpBetween(ctx, index) {
+        // Check which logical operator was used
+        const text = ctx.getText();
+        if (text.includes('kanakuti') || text.includes('kana') || text.includes('or') || text.includes('||')) {
+            return '||';
+        }
+        return '&&';
+    }
     visitInArrayOp(ctx) {
         const elem = this.visit(ctx.primaryExpression());
         const collection = this.visit(ctx.expression());

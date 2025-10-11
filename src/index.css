@@ -1,5 +1,10 @@
 @import "tailwindcss";
-
+@font-face {
+            font-family: 'JetBrains Mono';
+            src: url('./fonts/JetBrainsMono-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
 
 .shonax-editor {
   @apply h-screen flex flex-col bg-gray-900;

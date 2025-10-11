@@ -5,7 +5,7 @@ import ShonaxEditor from './ShonaxEditor';
 
 function App() {
   return (
-    <div className="App">
+    <div className="App" style={{fontFamily: "JetBrains Mono"}}>
       <ShonaxEditor />
     </div>
   );
