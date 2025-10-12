@@ -12,6 +12,7 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
         this.effectCounter = 0;
 
         this.textNodeCounter = 0;
+         this.componentImports = new Map();
 
 
         // Scope management
@@ -256,10 +257,6 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
         const input = ctx.start.getInputStream();
         const fullText = input.getText(0, input.size - 1);
 
-
-
-
-
         if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
             throw new Error('style elements cannot be assigned to variables');
         }
@@ -444,7 +441,17 @@ function _runEffects(){ for(const f of _effects) f();}`;
 
         /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
         if (isComponent) {
-
+   let importStatements = '';
+    if (this.componentImports && this.componentImports.size > 0) {
+        for (const [path, symbols] of this.componentImports) {
+            for (const symbol of symbols) {
+                importStatements += `import ${symbol} from '${path}';\n`;
+            }
+        }
+        if (importStatements) {
+            importStatements += '\n';  // Add extra newline after imports
+        }
+    }
 
             const hasIntervals = bodyCode.includes('setInterval(');
     const hasTimeouts = bodyCode.includes('setTimeout(');
@@ -493,7 +500,7 @@ function _runEffects(){ for(const f of _effects) f();}`;
 
 
 
-            return `${helpers}
+               return `${importStatements}${helpers}
 
 export default function ${this.componentName}(props = {}) {
 
@@ -1186,8 +1193,71 @@ ${setupCode}
         const elName = `el${this.elementCounter++}`;
         const rawTag = ctx.tagName(0).getText();
         const tagName = rawTag.toLowerCase();
+         const isCustom = /^[A-Z]/.test(rawTag);  // ADD THIS LINE
         const inExpr = ctx.parentCtx &&
             ctx.parentCtx.constructor.name === 'HtmlExprContext';
+
+
+             if (isCustom) {  // ADD THIS BLOCK
+        const kvPairs = [];
+        
+        // Process attributes as props
+        for (const a of ctx.attribute() || []) {
+            const key = a.attrName
+                ? a.attrName().getText()
+                : a.getChild(0).getText();
+                
+            const val = a.STRING()
+                ? a.STRING().getText()
+                : this.visit(a.shonaExpression());
+                
+            kvPairs.push(`${key}: ${val}`);
+        }
+        
+        // Process children
+        let childrenCode = '';
+        if (ctx.htmlContent()) {
+            this.parentStack.push(elName);
+            this.tagStack.push(tagName);
+            
+            // Temporarily change parent to collect children
+            const tempParent = `_children${this.elementCounter}`;
+            const oldParent = this.parentStack[this.parentStack.length - 1];
+            this.parentStack[this.parentStack.length - 1] = tempParent;
+            
+            const childContent = this.visit(ctx.htmlContent());
+            
+            // Restore parent
+            this.parentStack[this.parentStack.length - 1] = oldParent;
+            
+            this.parentStack.pop();
+            this.tagStack.pop();
+            
+            if (childContent && childContent.trim()) {
+                // Wrap children collection
+                childrenCode = `const ${tempParent} = [];\n${childContent}\n`;
+                kvPairs.push(`children: ${tempParent}`);
+            }
+        }
+        
+        const call = `${rawTag}({ ${kvPairs.join(', ')} })`;
+        const parent = this.parentStack.at(-1);
+        
+        if (inExpr) {
+            return `(() => {\n${childrenCode}    return ${call};\n})()`;
+        } else {
+            let code = childrenCode;
+            if (parent && parent !== 'root') {
+                code += `${parent}.appendChild(${call});\n`;
+            } else {
+                code += `const ${elName} = ${call};\n`;
+                if (parent === 'root') {
+                    code += `root.appendChild(${elName});\n`;
+                }
+            }
+            return code;
+        }
+    }
 
         /* ---------- where to append ---------- */
         const inComponent = this.target === 'component';
@@ -2194,17 +2264,91 @@ ${setupCode}
     =            IMPORTS & NETWORKING             =
     ============================================= */
 
+    // visitImportStatement(ctx) {
+    //     if (this.target !== 'node') {
+    //         console.warn("Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.");
+    //         return `// Import for '${ctx.ID(0).getText()}' ignored in browser target.`;
+    //     }
+    //     const symbol = ctx.ID(0).getText();
+    //     const module = ctx.ID(1).getText();
+    //     if (!this.imports.has(module)) this.imports.set(module, new Set());
+    //     this.imports.get(module).add(symbol);
+    //     return "";
+    // }
+
     visitImportStatement(ctx) {
-        if (this.target !== 'node') {
-            console.warn("Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.");
-            return `// Import for '${ctx.ID(0).getText()}' ignored in browser target.`;
+    const symbol = ctx.ID(0).getText();
+    
+    // Get the module path - could be ID or STRING
+    let modulePath;
+    if (ctx.ID(1)) {
+        modulePath = ctx.ID(1).getText();
+    } else if (ctx.STRING && ctx.STRING()) {
+        // Remove quotes from string
+        modulePath = ctx.STRING().getText().replace(/^["']|["']$/g, '');
+    } else {
+        console.warn(`Invalid import statement: ${ctx.getText()}`);
+        return '';
+    }
+    
+    // Check if this is a component import using various heuristics:
+    // 1. Ends with .shonax or .shonax.js
+    // 2. Contains path separators (/ or .)
+    // 3. Ends with "Component" (naming convention)
+    // 4. Starts with uppercase letter (component convention)
+    const isComponentImport = 
+        modulePath.endsWith('.shonax') || 
+        modulePath.endsWith('.shonax.js') ||
+        modulePath.includes('/') || 
+        modulePath.startsWith('.') ||
+        modulePath.endsWith('Component') ||
+        /^[A-Z]/.test(modulePath); // Starts with uppercase
+    
+    if (isComponentImport) {
+        // Convert module path to proper import path
+        let importPath = modulePath;
+        
+        // If it ends with Component, assume it's a .js file
+        if (modulePath.endsWith('Component')) {
+            importPath = `./${modulePath}.js`;
+        } else if (!modulePath.includes('/') && !modulePath.startsWith('.')) {
+            // Simple ID that starts with uppercase - assume local component
+            importPath = `./${modulePath}.js`;
+        } else if (modulePath.endsWith('.shonax')) {
+            // Convert .shonax to .js
+            importPath = modulePath.replace(/\.shonax$/, '.js');
+        } else if (!modulePath.endsWith('.js')) {
+            // Add .js extension if missing
+            importPath = modulePath + '.js';
         }
-        const symbol = ctx.ID(0).getText();
-        const module = ctx.ID(1).getText();
-        if (!this.imports.has(module)) this.imports.set(module, new Set());
-        this.imports.get(module).add(symbol);
+        
+        // Store component import
+        if (!this.componentImports.has(importPath)) {
+            this.componentImports.set(importPath, new Set());
+        }
+        this.componentImports.get(importPath).add(symbol);
+        
+        // Return empty string as this will be handled in the header
         return "";
     }
+    
+    // Handle regular Node.js imports (existing logic)
+    if (this.target !== 'node' && this.target !== 'component') {
+        console.warn(`Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.`);
+        return `// Import for '${symbol}' ignored in browser target.`;
+    }
+    
+    // In component mode, non-component imports are ignored
+    if (this.target === 'component') {
+        return `// Import for '${symbol}' ignored in browser target.`;
+    }
+    
+    if (!this.imports.has(modulePath)) {
+        this.imports.set(modulePath, new Set());
+    }
+    this.imports.get(modulePath).add(symbol);
+    return "";
+}
 
     visitFetchStatement(ctx) {
         const varName = ctx.ID(0).getText();
