@@ -68,9 +68,9 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
     }
 
     _getStableKey(node) {
-    const token = node.start || node;
-    return `k_${token.line}_${token.column}`;
-}
+        const token = node.start || node;
+        return `k_${token.line}_${token.column}`;
+    }
 
     _emitInterpolatedText(raw, parent, insideStyle) {
         const lines = [];
@@ -443,25 +443,57 @@ function $$setAttribute(n,a,v){
 function _runEffects(){ for(const f of _effects) f();}`;
 
         /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
-if (isComponent) {
-    const destructure = this.componentProps.length
-        ? `const { ${this.componentProps.join(', ')} } = props;`
-        : '';
-    const varDecls = componentVars.length
-        ? componentVars.map(l => '    ' + l + ';').join('\n')
-        : '';
-    const fnDecls = componentFns.length
-        ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
-        : '';
+        if (isComponent) {
 
-    // Check if zvanyorwa is needed
-    const needsZvanyorwa = bodyCode.includes('zvanyorwa');
-    const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
 
-    // Indent the DOM creation logic to fit inside the _render function
-    const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
+            const hasIntervals = bodyCode.includes('setInterval(');
+    const hasTimeouts = bodyCode.includes('setTimeout(');
+    
+    // Separate setup code (intervals/timeouts) from render code
+    let setupCode = '';
+    let renderBodyCode = bodyCode;
+    
+    if (hasIntervals || hasTimeouts) {
+        // Extract interval/timeout statements from the body
+        const lines = bodyCode.split('\n');
+        const setupLines = [];
+        const renderLines = [];
+        
+        for (const line of lines) {
+            if (line.trim().includes('setInterval(') || line.trim().includes('setTimeout(')) {
+                setupLines.push(line);
+            } else {
+                renderLines.push(line);
+            }
+        }
+        
+        setupCode = setupLines.join('\n');
+        renderBodyCode = renderLines.join('\n');
+    }
+            const destructure = this.componentProps.length
+                ? `const { ${this.componentProps.join(', ')} } = props;`
+                : '';
+            const varDecls = componentVars.length
+                ? componentVars.map(l => '    ' + l + ';').join('\n')
+                : '';
+            const fnDecls = componentFns.length
+                ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
+                : '';
 
-    return `${helpers}
+            // Check if zvanyorwa is needed
+            const needsZvanyorwa = bodyCode.includes('zvanyorwa');
+            const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
+
+
+
+
+            // Indent the DOM creation logic to fit inside the _render function
+            // const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
+    const indentedBody = renderBodyCode.split('\n').map(l => '        ' + l).join('\n');
+
+
+
+            return `${helpers}
 
 export default function ${this.componentName}(props = {}) {
 
@@ -508,6 +540,9 @@ ${indentedBody}
     }
 
     _render(); // Initial render call.
+    
+    // Set up intervals and timeouts after initial render
+${setupCode}
 
     return root;
 }`;
@@ -575,17 +610,7 @@ ${indentedBody}
         // Remove all occurrences of the specific value
         return `${varName} = ${varName}.filter(x => x !== ${value})`;
     }
-    // visitProgramElement(ctx) {
-    //     // if (ctx.line && ctx.line()) return this.visit(ctx.line());
-    //     // if (ctx.htmlElement && ctx.htmlElement()) return this.visit(ctx.htmlElement());
-    //     // return '';
-
-    //     if (ctx.line && ctx.line()) return this.visit(ctx.line());
-    //     if (ctx.htmlElement && ctx.htmlElement()) return this.visit(ctx.htmlElement());
-    //     if (ctx.reactiveBlock && ctx.reactiveBlock())  // ← NEW branch
-    //         return this.visit(ctx.reactiveBlock());
-    //     return '';
-    // }
+ 
 
     visitProgramElement(ctx) {
 
@@ -1156,114 +1181,114 @@ ${indentedBody}
     }
 
 
-visitHtmlBlockElement(ctx) {
-    /* ---------- basic info ---------- */
-    const elName  = `el${this.elementCounter++}`;
-    const rawTag  = ctx.tagName(0).getText();
-    const tagName = rawTag.toLowerCase();
-    const inExpr  = ctx.parentCtx &&
-                    ctx.parentCtx.constructor.name === 'HtmlExprContext';
+    visitHtmlBlockElement(ctx) {
+        /* ---------- basic info ---------- */
+        const elName = `el${this.elementCounter++}`;
+        const rawTag = ctx.tagName(0).getText();
+        const tagName = rawTag.toLowerCase();
+        const inExpr = ctx.parentCtx &&
+            ctx.parentCtx.constructor.name === 'HtmlExprContext';
 
-    /* ---------- where to append ---------- */
-    const inComponent = this.target === 'component';
-    let parent;
-    if (inExpr)               parent = null;
-    else if (tagName === 'style') parent = 'document.head';
-    else                         parent = this.parentStack.at(-1);
+        /* ---------- where to append ---------- */
+        const inComponent = this.target === 'component';
+        let parent;
+        if (inExpr) parent = null;
+        else if (tagName === 'style') parent = 'document.head';
+        else parent = this.parentStack.at(-1);
 
-    /* ---------- create element + stable key ---------- */
-    const key  = this._getStableKey(ctx);
-    let code   = inExpr
-        ? `(() => {\n    const ${elName} = document.createElement('${tagName}');\n`
-        : `const ${elName} = document.createElement('${tagName}');\n`;
-    code      += inExpr
-        ? `    ${elName}.setAttribute('data-k', '${key}');\n`
-        : `${elName}.setAttribute('data-k', '${key}');\n`;
-
-    /* ---------- attributes ---------- */
-    const attrs            = ctx.attribute() || [];
-    let hasExplicitValue   = false;
-    let selectBindExpr     = null;      // remember zvasarudzwa expr
-
-    for (const a of attrs) {
-        const aName = a.attrName ? a.attrName().getText() : '';
-        if (aName === 'value')         hasExplicitValue = true;
-        if (aName === 'zvasarudzwa')   selectBindExpr   = this.visit(a.shonaExpression());
-
-        const snip = this.visitAttribute(a, elName);
-        if (!snip) continue;
+        /* ---------- create element + stable key ---------- */
+        const key = this._getStableKey(ctx);
+        let code = inExpr
+            ? `(() => {\n    const ${elName} = document.createElement('${tagName}');\n`
+            : `const ${elName} = document.createElement('${tagName}');\n`;
         code += inExpr
-            ? snip.split('\n').filter(Boolean).map(l => '    ' + l).join('\n') + '\n'
-            : snip;
-    }
+            ? `    ${elName}.setAttribute('data-k', '${key}');\n`
+            : `${elName}.setAttribute('data-k', '${key}');\n`;
 
-    /* ---------- auto id for form fields ---------- */
-    if (['input', 'textarea', 'select'].includes(tagName)) {
-        const already = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
-        if (!already) {
+        /* ---------- attributes ---------- */
+        const attrs = ctx.attribute() || [];
+        let hasExplicitValue = false;
+        let selectBindExpr = null;      // remember zvasarudzwa expr
+
+        for (const a of attrs) {
+            const aName = a.attrName ? a.attrName().getText() : '';
+            if (aName === 'value') hasExplicitValue = true;
+            if (aName === 'zvasarudzwa') selectBindExpr = this.visit(a.shonaExpression());
+
+            const snip = this.visitAttribute(a, elName);
+            if (!snip) continue;
             code += inExpr
-                ? `    ${elName}.id = 'input_${this.elementCounter}';\n`
-                : `${elName}.id = 'input_${this.elementCounter}';\n`;
-        }
-    }
-
-    /* ---------- children ---------- */
-    const isVoid = this.voidTags?.has(tagName);          // <- needs voidTags Set
-    if (!isVoid) {
-        this.parentStack.push(elName);
-        this.tagStack.push(tagName);
-    }
-
-    let childrenCode = '';
-
-    /* text-only <option> */
-    if (tagName === 'option' && !ctx.htmlContent()) {
-        const m   = ctx.getText().match(/>([\s\S]*?)<\/option/i);
-        const txt = (m ? m[1] : '').trim();
-        if (txt) {
-            const esc = txt.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-            const line = `${elName}.appendChild($$createText(\`${esc}\`));\n`;
-            childrenCode += inExpr ? '    ' + line : line;
-        }
-    }
-
-    /* normal inner html */
-    if (ctx.htmlContent()) {
-        let inner = this.visit(ctx.htmlContent());
-        if (inner) {
-            inner = inExpr
-                ? inner.split('\n').filter(Boolean).map(l => '    ' + l).join('\n') + '\n'
-                : inner;
-            childrenCode += inner;
+                ? snip.split('\n').filter(Boolean).map(l => '    ' + l).join('\n') + '\n'
+                : snip;
         }
 
-        /* default value for <option> without explicit value */
-        if (tagName === 'option' && !hasExplicitValue) {
-            const fix = `if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`;
-            childrenCode += inExpr ? '    ' + fix : fix;
+        /* ---------- auto id for form fields ---------- */
+        if (['input', 'textarea', 'select'].includes(tagName)) {
+            const already = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
+            if (!already) {
+                code += inExpr
+                    ? `    ${elName}.id = 'input_${this.elementCounter}';\n`
+                    : `${elName}.id = 'input_${this.elementCounter}';\n`;
+            }
+        }
+
+        /* ---------- children ---------- */
+        const isVoid = this.voidTags?.has(tagName);          // <- needs voidTags Set
+        if (!isVoid) {
+            this.parentStack.push(elName);
+            this.tagStack.push(tagName);
+        }
+
+        let childrenCode = '';
+
+        /* text-only <option> */
+        if (tagName === 'option' && !ctx.htmlContent()) {
+            const m = ctx.getText().match(/>([\s\S]*?)<\/option/i);
+            const txt = (m ? m[1] : '').trim();
+            if (txt) {
+                const esc = txt.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+                const line = `${elName}.appendChild($$createText(\`${esc}\`));\n`;
+                childrenCode += inExpr ? '    ' + line : line;
+            }
+        }
+
+        /* normal inner html */
+        if (ctx.htmlContent()) {
+            let inner = this.visit(ctx.htmlContent());
+            if (inner) {
+                inner = inExpr
+                    ? inner.split('\n').filter(Boolean).map(l => '    ' + l).join('\n') + '\n'
+                    : inner;
+                childrenCode += inner;
+            }
+
+            /* default value for <option> without explicit value */
+            if (tagName === 'option' && !hasExplicitValue) {
+                const fix = `if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`;
+                childrenCode += inExpr ? '    ' + fix : fix;
+            }
+        }
+
+        if (!isVoid) {
+            this.parentStack.pop();
+            this.tagStack.pop();
+        }
+
+        /* ---------- assemble ---------- */
+        if (inExpr) {
+            code += childrenCode;
+            if (tagName === 'select' && selectBindExpr)
+                code += `    ${elName}.value = ${selectBindExpr};\n`;
+            code += `    return ${elName};\n})();`;
+            return code;
+        } else {
+            code += childrenCode;
+            if (tagName === 'select' && selectBindExpr)
+                code += `${elName}.value = ${selectBindExpr};\n`;
+            if (parent) code += `${parent}.appendChild(${elName});\n`;
+            return code;
         }
     }
-
-    if (!isVoid) {
-        this.parentStack.pop();
-        this.tagStack.pop();
-    }
-
-    /* ---------- assemble ---------- */
-    if (inExpr) {
-        code += childrenCode;
-        if (tagName === 'select' && selectBindExpr)
-            code += `    ${elName}.value = ${selectBindExpr};\n`;
-        code += `    return ${elName};\n})();`;
-        return code;
-    } else {
-        code += childrenCode;
-        if (tagName === 'select' && selectBindExpr)
-            code += `${elName}.value = ${selectBindExpr};\n`;
-        if (parent) code += `${parent}.appendChild(${elName});\n`;
-        return code;
-    }
-}
 
     visitHtmlExpr(ctx) {
         // Only allow in component mode
@@ -1275,21 +1300,21 @@ visitHtmlBlockElement(ctx) {
         return this.visit(ctx.htmlElement());   // returns the IIFE string
     }
     visitHtmlSelfClosingElement(ctx) {
-    const elName  = `el${this.elementCounter++}`;
-    const rawTag  = ctx.tagName().getText();
-    const tagName = rawTag.toLowerCase();
-    if (tagName==='style')
-        throw Error('<style> cannot be self-closing – write <style>…</style>.');
+        const elName = `el${this.elementCounter++}`;
+        const rawTag = ctx.tagName().getText();
+        const tagName = rawTag.toLowerCase();
+        if (tagName === 'style')
+            throw Error('<style> cannot be self-closing – write <style>…</style>.');
 
-    const stableKey = this._getStableKey(ctx);
-    const isCustom  = /^[A-Z]/.test(rawTag);
-    const inComp    = this.target==='component';
-    let parent      = inComp ? (this.parentStack.at(-1)==='root'?null:this.parentStack.at(-1))
-                             : this.parentStack.at(-1);
+        const stableKey = this._getStableKey(ctx);
+        const isCustom = /^[A-Z]/.test(rawTag);
+        const inComp = this.target === 'component';
+        let parent = inComp ? (this.parentStack.at(-1) === 'root' ? null : this.parentStack.at(-1))
+            : this.parentStack.at(-1);
 
-    /* ---- custom component (unchanged) ---- */
+        /* ---- custom component (unchanged) ---- */
 
-    if (isCustom) {
+        if (isCustom) {
             const kvPairs = [];
 
             for (const a of ctx.attribute() || []) {
@@ -1312,18 +1337,18 @@ visitHtmlBlockElement(ctx) {
             return `const ${elName} = ${call};\n`;
         }
 
-    /* ---- native element ---- */
-    let code = `const ${elName} = document.createElement('${tagName}');\n`;
-    code    += `${elName}.setAttribute('data-k', '${stableKey}');\n`;
+        /* ---- native element ---- */
+        let code = `const ${elName} = document.createElement('${tagName}');\n`;
+        code += `${elName}.setAttribute('data-k', '${stableKey}');\n`;
 
-    for (const a of ctx.attribute() || []) {
-        const snip = this.visitAttribute(a, elName);
-        if (snip) code += snip;
+        for (const a of ctx.attribute() || []) {
+            const snip = this.visitAttribute(a, elName);
+            if (snip) code += snip;
+        }
+
+        if (parent) code += `${parent}.appendChild(${elName});\n`;
+        return code;
     }
-
-    if (parent) code += `${parent}.appendChild(${elName});\n`;
-    return code;
-}
 
 
 
@@ -1352,76 +1377,76 @@ visitHtmlBlockElement(ctx) {
         return 'zvanyorwa';
     }
 
-/** Handle every HTML attribute (events, bindings, …) */
-visitAttribute(ctx, elName) {
-    const attrName = ctx.attrName ? ctx.attrName().getText() : '';
+    /** Handle every HTML attribute (events, bindings, …) */
+    visitAttribute(ctx, elName) {
+        const attrName = ctx.attrName ? ctx.attrName().getText() : '';
 
-    /* ────────────────────────────────
-       1.  EVENT ATTRIBUTES
-       ──────────────────────────────── */
-    const eventMap = {
-        rikasubmitwa : 'submit',
-        rikabayiwa   : 'click',
-        rakabayiwa   : 'click',
-        rikapresswa  : 'keypress',
-        rakapresswa  : 'keypress',
-        ikachinjwa   : 'change',
-        ikanyorwa    : 'input',
-        ikasarudzwa  : 'change'
-    };
-    if (eventMap[attrName]) {
-        const jsHandler = this.visit(ctx.shonaExpression());
-        const domEvent  = eventMap[attrName];
+        /* ────────────────────────────────
+           1.  EVENT ATTRIBUTES
+           ──────────────────────────────── */
+        const eventMap = {
+            rikasubmitwa: 'submit',
+            rikabayiwa: 'click',
+            rakabayiwa: 'click',
+            rikapresswa: 'keypress',
+            rakapresswa: 'keypress',
+            ikachinjwa: 'change',
+            ikanyorwa: 'input',
+            ikasarudzwa: 'change'
+        };
+        if (eventMap[attrName]) {
+            const jsHandler = this.visit(ctx.shonaExpression());
+            const domEvent = eventMap[attrName];
 
-        /* special case  ikanyorwa  → inject zvanyorwa = e.target.value */
-        if (attrName === 'ikanyorwa') {
-            return `$$listen(${elName}, '${domEvent}', e => {
+            /* special case  ikanyorwa  → inject zvanyorwa = e.target.value */
+            if (attrName === 'ikanyorwa') {
+                return `$$listen(${elName}, '${domEvent}', e => {
                 zvanyorwa = e.target.value;
                 (${jsHandler})(e);
             });\n`;
+            }
+
+            /* normal custom handler */
+            return `$$listen(${elName}, '${domEvent}', ${jsHandler});\n`;
         }
 
-        /* normal custom handler */
-        return `$$listen(${elName}, '${domEvent}', ${jsHandler});\n`;
-    }
-
-    /* ────────────────────────────────
-       2.  TWO-WAY TEXT INPUT binding  ( zvanyorwa )
-       ──────────────────────────────── */
-    if (attrName === 'zvanyorwa') {
-        const bindExpr = this.visit(ctx.shonaExpression());
-        let code  = `$$setAttribute(${elName}, 'value', ${bindExpr});\n`;
-        code     += `$$listen(${elName}, 'input', e => {
+        /* ────────────────────────────────
+           2.  TWO-WAY TEXT INPUT binding  ( zvanyorwa )
+           ──────────────────────────────── */
+        if (attrName === 'zvanyorwa') {
+            const bindExpr = this.visit(ctx.shonaExpression());
+            let code = `$$setAttribute(${elName}, 'value', ${bindExpr});\n`;
+            code += `$$listen(${elName}, 'input', e => {
             const zvanyorwa = e.target.value;
             ${bindExpr} = zvanyorwa;
             _runEffects();
         });\n`;
-        return code;
-    }
+            return code;
+        }
 
-    /* ────────────────────────────────
-       3.  TWO-WAY SELECT binding      ( zvasarudzwa )
-       ──────────────────────────────── */
-    if (attrName === 'zvasarudzwa') {
-        const bindExpr = this.visit(ctx.shonaExpression());
-        let code  = `$$setAttribute(${elName}, 'value', ${bindExpr});\n`;
-        code     += `$$listen(${elName}, 'change', e => {
+        /* ────────────────────────────────
+           3.  TWO-WAY SELECT binding      ( zvasarudzwa )
+           ──────────────────────────────── */
+        if (attrName === 'zvasarudzwa') {
+            const bindExpr = this.visit(ctx.shonaExpression());
+            let code = `$$setAttribute(${elName}, 'value', ${bindExpr});\n`;
+            code += `$$listen(${elName}, 'change', e => {
             ${bindExpr} = e.target.value;
             _runEffects();
         });\n`;
-        return code;
+            return code;
+        }
+
+        /* ────────────────────────────────
+           4.  NORMAL ATTRIBUTE
+           ──────────────────────────────── */
+        let realAttr = attrName === 'className' ? 'class' : attrName;
+        const value = ctx.STRING()
+            ? ctx.STRING().getText()
+            : this.visit(ctx.shonaExpression());
+
+        return `$$setAttribute(${elName}, '${realAttr}', ${value});\n`;
     }
-
-    /* ────────────────────────────────
-       4.  NORMAL ATTRIBUTE
-       ──────────────────────────────── */
-    let realAttr = attrName === 'className' ? 'class' : attrName;
-    const value  = ctx.STRING()
-                  ? ctx.STRING().getText()
-                  : this.visit(ctx.shonaExpression());
-
-    return `$$setAttribute(${elName}, '${realAttr}', ${value});\n`;
-}
 
 
     visitHtmlContent(ctx) {
@@ -2211,57 +2236,86 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
     =            TIMERS                           =
     ============================================= */
 
-    visitIntervalStatement(ctx) {
-        const callbackCode = this.visit(ctx.primaryExpression());
-        const timeValue = this.visit(ctx.expression());
-        const milliseconds = `(${timeValue}) * 1000`;
-        return `setInterval(${callbackCode}, ${milliseconds})`;
+ visitIntervalStatement(ctx) {
+    let callbackCode = this.visit(ctx.primaryExpression());
+    if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {           //  "foo()"
+        callbackCode = callbackCode.replace(/\(\s*\)$/, '');    //  -> "foo"
     }
+    const timeValue = this.visit(ctx.expression());
+    const milliseconds = `(${timeValue}) * 1000`;
+    return `setInterval(${callbackCode}, ${milliseconds})`;
+}
 
-    visitTimeoutStatement(ctx) {
-        const callbackCode = this.visit(ctx.primaryExpression());
-        const timeValue = this.visit(ctx.expression());
-        const milliseconds = `(${timeValue}) * 1000`;
-        return `setTimeout(${callbackCode}, ${milliseconds})`;
-    }
-
-    visitIntervalExpr(ctx) {
-        const callbackExpr = ctx.primaryExpression();
-        let callbackCode = this.visit(callbackExpr);
-
-        // If the callback is a function call like showMessage(), extract just the function name
-        if (callbackExpr.functionCall && callbackExpr.functionCall()) {
-            const funcName = callbackExpr.functionCall().ID().getText();
-            const args = callbackExpr.functionCall().argumentList();
-            if (!args || !args.expression || args.expression().length === 0) {
-                // No arguments, just use the function name
-                callbackCode = funcName;
-            }
+visitTimeoutStatement(ctx) {
+    const callbackExpr = ctx.primaryExpression();
+    let callbackCode = this.visit(callbackExpr);
+    
+    // If the callback is a function call like showMessage(), extract just the function name
+    if (callbackExpr.functionCall && callbackExpr.functionCall()) {
+        const funcName = callbackExpr.functionCall().ID().getText();
+        const args = callbackExpr.functionCall().argumentList();
+        if (!args || !args.expression || args.expression().length === 0) {
+            // No arguments, just use the function name
+            callbackCode = funcName;
         }
-
-        const timeValue = this.visit(ctx.expression());
-        const milliseconds = `(${timeValue}) * 1000`;
-        return `setInterval(${callbackCode}, ${milliseconds})`;
-    }
-
-    visitTimeoutExpr(ctx) {
-        const callbackExpr = ctx.primaryExpression();
-        let callbackCode = this.visit(callbackExpr);
-
-        // If the callback is a function call like showMessage(), extract just the function name
-        if (callbackExpr.functionCall && callbackExpr.functionCall()) {
-            const funcName = callbackExpr.functionCall().ID().getText();
-            const args = callbackExpr.functionCall().argumentList();
-            if (!args || !args.expression || args.expression().length === 0) {
-                // No arguments, just use the function name
-                callbackCode = funcName;
-            }
+    } else {
+        // Fallback to regex approach
+        if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
+            callbackCode = callbackCode.replace(/\(\s*\)$/, '');
         }
-
-        const timeValue = this.visit(ctx.expression());
-        const milliseconds = `(${timeValue}) * 1000`;
-        return `setTimeout(${callbackCode}, ${milliseconds})`;
     }
+    
+    const timeValue = this.visit(ctx.expression());
+    const milliseconds = `(${timeValue}) * 1000`;
+    return `setTimeout(${callbackCode}, ${milliseconds})`;
+}
+
+visitIntervalExpr(ctx) {
+    const callbackExpr = ctx.primaryExpression();
+    let callbackCode = this.visit(callbackExpr);
+
+    // If the callback is a function call like showMessage(), extract just the function name
+    if (callbackExpr.functionCall && callbackExpr.functionCall()) {
+        const funcName = callbackExpr.functionCall().ID().getText();
+        const args = callbackExpr.functionCall().argumentList();
+        if (!args || !args.expression || args.expression().length === 0) {
+            // No arguments, just use the function name
+            callbackCode = funcName;
+        }
+    } else {
+        // Fallback to regex approach
+        if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
+            callbackCode = callbackCode.replace(/\(\s*\)$/, '');
+        }
+    }
+
+    const timeValue = this.visit(ctx.expression());
+    const milliseconds = `(${timeValue}) * 1000`;
+    return `setInterval(${callbackCode}, ${milliseconds})`;
+}
+visitTimeoutExpr(ctx) {
+    const callbackExpr = ctx.primaryExpression();
+    let callbackCode = this.visit(callbackExpr);
+
+    // If the callback is a function call like showMessage(), extract just the function name
+    if (callbackExpr.functionCall && callbackExpr.functionCall()) {
+        const funcName = callbackExpr.functionCall().ID().getText();
+        const args = callbackExpr.functionCall().argumentList();
+        if (!args || !args.expression || args.expression().length === 0) {
+            // No arguments, just use the function name
+            callbackCode = funcName;
+        }
+    } else {
+        // Fallback to regex approach
+        if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
+            callbackCode = callbackCode.replace(/\(\s*\)$/, '');
+        }
+    }
+
+    const timeValue = this.visit(ctx.expression());
+    const milliseconds = `(${timeValue}) * 1000`;
+    return `setTimeout(${callbackCode}, ${milliseconds})`;
+}
 
     /* =============================================
     =            PROPERTIES                       =

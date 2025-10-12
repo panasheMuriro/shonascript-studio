@@ -1118,7 +1118,7 @@ main()`,
                       theme="vs-dark"
                       value={compiledCode}
                       options={{
-                        readOnly: true,
+                        // readOnly: true,
                         minimap: { enabled: false },
                         fontSize: 14,
                         fontFamily: "'Jetbrains Mono', 'Fira Code', monospace",
