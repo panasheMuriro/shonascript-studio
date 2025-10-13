@@ -367,8 +367,14 @@ htmlTextContent
 
 /* ─────────────── ORIGINAL SHONASCRIPT FEATURES ────── */
 inputStatement : BVUNZA ID STRING ;
-importStatement : TORA ID KUBVA MU ID ;
+// importStatement : TORA ID KUBVA MU ID ;
 fetchStatement  : TAMBIRA ID KUBVA KU (STRING | ID) ;
+importStatement
+    : TORA idList KUBVA MU modulePath
+    ;
+
+idList      : ID (COMMA ID)* ;
+modulePath  : ID | STRING ;
 
 propName : ID | BASA ;
 // propertyRef : propName POS ID (POS ID)* ;

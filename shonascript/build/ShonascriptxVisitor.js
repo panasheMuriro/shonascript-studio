@@ -396,14 +396,26 @@ export default class ShonascriptxVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by ShonascriptxParser#fetchStatement.
+	visitFetchStatement(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by ShonascriptxParser#importStatement.
 	visitImportStatement(ctx) {
 	  return this.visitChildren(ctx);
 	}
 
 
-	// Visit a parse tree produced by ShonascriptxParser#fetchStatement.
-	visitFetchStatement(ctx) {
+	// Visit a parse tree produced by ShonascriptxParser#idList.
+	visitIdList(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by ShonascriptxParser#modulePath.
+	visitModulePath(ctx) {
 	  return this.visitChildren(ctx);
 	}
 

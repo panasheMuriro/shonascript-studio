@@ -590,6 +590,15 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 	}
 
 
+	// Enter a parse tree produced by ShonascriptxParser#fetchStatement.
+	enterFetchStatement(ctx) {
+	}
+
+	// Exit a parse tree produced by ShonascriptxParser#fetchStatement.
+	exitFetchStatement(ctx) {
+	}
+
+
 	// Enter a parse tree produced by ShonascriptxParser#importStatement.
 	enterImportStatement(ctx) {
 	}
@@ -599,12 +608,21 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 	}
 
 
-	// Enter a parse tree produced by ShonascriptxParser#fetchStatement.
-	enterFetchStatement(ctx) {
+	// Enter a parse tree produced by ShonascriptxParser#idList.
+	enterIdList(ctx) {
 	}
 
-	// Exit a parse tree produced by ShonascriptxParser#fetchStatement.
-	exitFetchStatement(ctx) {
+	// Exit a parse tree produced by ShonascriptxParser#idList.
+	exitIdList(ctx) {
+	}
+
+
+	// Enter a parse tree produced by ShonascriptxParser#modulePath.
+	enterModulePath(ctx) {
+	}
+
+	// Exit a parse tree produced by ShonascriptxParser#modulePath.
+	exitModulePath(ctx) {
 	}
 
 

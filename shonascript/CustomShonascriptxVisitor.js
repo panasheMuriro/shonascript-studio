@@ -2252,7 +2252,8 @@ ${setupCode}
     =            IMPORTS & NETWORKING             =
     ============================================= */
 
-//     visitImportStatement(ctx) {
+
+// visitImportStatement(ctx) {
 //     const symbol = ctx.ID(0).getText();
     
 //     // Get the module path - could be ID or STRING
@@ -2267,55 +2268,21 @@ ${setupCode}
 //         return '';
 //     }
     
-//     // Check if this is a component import using various heuristics:
-//     // 1. Ends with .shonax or .shonax.js
-//     // 2. Contains path separators (/ or .)
-//     // 3. Ends with "Component" (naming convention)
-//     // 4. Starts with uppercase letter (component convention)
-//     const isComponentImport = 
-//         modulePath.endsWith('.shonax') || 
-//         modulePath.endsWith('.shonax.js') ||
-//         modulePath.includes('/') || 
-//         modulePath.startsWith('.') ||
-//         modulePath.endsWith('Component') ||
-//         /^[A-Z]/.test(modulePath); // Starts with uppercase
-    
-//     if (isComponentImport) {
-//         // Convert module path to proper import path
-//         let importPath = modulePath;
-        
-//         // If it ends with Component, assume it's a .js file
-//         if (modulePath.endsWith('Component')) {
-//             importPath = `./${modulePath}.js`;
-//         } else if (!modulePath.includes('/') && !modulePath.startsWith('.')) {
-//             // Simple ID that starts with uppercase - assume local component
-//             importPath = `./${modulePath}.js`;
-//         } else if (modulePath.endsWith('.shonax')) {
-//             // Convert .shonax to .js
-//             importPath = modulePath.replace(/\.shonax$/, '.js');
-//         } else if (!modulePath.endsWith('.js')) {
-//             // Add .js extension if missing
-//             importPath = modulePath + '.js';
+//     // In component mode, generate the actual import statement
+//     if (this.target === 'component') {
+//         // Store for later use in the import header
+//         if (!this.componentImports.has(modulePath)) {
+//             this.componentImports.set(modulePath, new Set());
 //         }
+//         this.componentImports.get(modulePath).add(symbol);
         
-//         // Store component import
-//         if (!this.componentImports.has(importPath)) {
-//             this.componentImports.set(importPath, new Set());
-//         }
-//         this.componentImports.get(importPath).add(symbol);
-        
-//         // Return empty string as this will be handled in the header
-//         return "";
+//         // Return empty string - the import will be added to the header
+//         return '';
 //     }
     
 //     // Handle regular Node.js imports (existing logic)
-//     if (this.target !== 'node' && this.target !== 'component') {
+//     if (this.target !== 'node') {
 //         console.warn(`Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.`);
-//         return `// Import for '${symbol}' ignored in browser target.`;
-//     }
-    
-//     // In component mode, non-component imports are ignored
-//     if (this.target === 'component') {
 //         return `// Import for '${symbol}' ignored in browser target.`;
 //     }
     
@@ -2327,43 +2294,38 @@ ${setupCode}
 // }
 
 visitImportStatement(ctx) {
-    const symbol = ctx.ID(0).getText();
-    
-    // Get the module path - could be ID or STRING
+    // ---------- symbols ----------
+    const symbolTokens = ctx.idList().ID();
+    const symbols      = symbolTokens.map(t => t.getText());
+
+    // ---------- module path ----------
     let modulePath;
-    if (ctx.ID(1)) {
-        modulePath = ctx.ID(1).getText();
-    } else if (ctx.STRING && ctx.STRING()) {
-        // Remove quotes from string
-        modulePath = ctx.STRING().getText().replace(/^["']|["']$/g, '');
+    if (ctx.modulePath().ID()) {
+        modulePath = ctx.modulePath().ID().getText();        // example   | utils/math
     } else {
-        console.warn(`Invalid import statement: ${ctx.getText()}`);
-        return '';
+        modulePath = ctx.modulePath().STRING().getText()
+                               .replace(/^["']|["']$/g, ''); // "example" → example
     }
-    
-    // In component mode, generate the actual import statement
+
+    /* ============ COMPONENT TARGET ============ */
     if (this.target === 'component') {
-        // Store for later use in the import header
-        if (!this.componentImports.has(modulePath)) {
+        if (!this.componentImports.has(modulePath))
             this.componentImports.set(modulePath, new Set());
-        }
-        this.componentImports.get(modulePath).add(symbol);
-        
-        // Return empty string - the import will be added to the header
+        symbols.forEach(s => this.componentImports.get(modulePath).add(s));
+        return '';                 // real import emitted later in header
+    }
+
+    /* ============ NODE TARGET ============ */
+    if (this.target === 'node') {
+        if (!this.imports.has(modulePath))
+            this.imports.set(modulePath, new Set());
+        symbols.forEach(s => this.imports.get(modulePath).add(s));
         return '';
     }
-    
-    // Handle regular Node.js imports (existing logic)
-    if (this.target !== 'node') {
-        console.warn(`Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.`);
-        return `// Import for '${symbol}' ignored in browser target.`;
-    }
-    
-    if (!this.imports.has(modulePath)) {
-        this.imports.set(modulePath, new Set());
-    }
-    this.imports.get(modulePath).add(symbol);
-    return "";
+
+    /* ============ BROWSER (non-component) ============ */
+    console.warn(`Warning: 'tora ... kubva mu' ignored in browser target.`);
+    return `// import of ${symbols.join(', ')} ignored in browser target`;
 }
 
     visitFetchStatement(ctx) {
