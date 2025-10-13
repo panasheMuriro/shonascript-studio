@@ -441,18 +441,48 @@ function _runEffects(){ for(const f of _effects) f();}`;
 
         /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
         if (isComponent) {
-   let importStatements = '';
+
+let importStatements = '';
     if (this.componentImports && this.componentImports.size > 0) {
         for (const [path, symbols] of this.componentImports) {
-            for (const symbol of symbols) {
-                importStatements += `import ${symbol} from '${path}';\n`;
+            // Normalize the import path
+            let importPath = path;
+            
+            if (!path.includes('/') && !path.includes('.')) {
+                importPath = `./${path}.js`;
+            } else if (path.endsWith('.shonax')) {
+                importPath = path.replace(/\.shonax$/, '.js');
+            } else if (path.endsWith('.shona')) {
+                importPath = path.replace(/\.shona$/, '.js');
+            } else if (!path.endsWith('.js')) {
+                importPath = `${path}.js`;
+            }
+            
+            // Import all symbols from this path
+            const symbolsList = Array.from(symbols);
+            
+            // Check if this is likely a utility module (not a component)
+            const isUtilityModule = path === 'example' || 
+                                   path.endsWith('.shona') || 
+                                   !path.match(/^[A-Z]/) && !path.includes('Component');
+            
+            if (isUtilityModule) {
+                // For utility modules, import default and destructure
+                importStatements += `import utilModule from '${importPath}';\n`;
+                symbolsList.forEach(symbol => {
+                    importStatements += `const ${symbol} = utilModule.${symbol};\n`;
+                });
+            } else {
+                // For components, use regular imports
+                symbolsList.forEach(symbol => {
+                    importStatements += `import ${symbol} from '${importPath}';\n`;
+                });
             }
         }
         if (importStatements) {
-            importStatements += '\n';  // Add extra newline after imports
+            importStatements += '\n';
         }
     }
-
             const hasIntervals = bodyCode.includes('setInterval(');
     const hasTimeouts = bodyCode.includes('setTimeout(');
     
@@ -859,48 +889,6 @@ ${setupCode}
     /* =============================================
     =            CONTROL FLOW                     =
     ============================================= */
-
-
-    // visitConditionalStatement(ctx) {
-    //     const condition = this.visit(ctx.expression(0));
-
-    //     // Clean the first condition - remove outer parentheses if present
-    //     const cleanCondition = condition.startsWith('(') && condition.endsWith(')')
-    //         ? condition.slice(1, -1)
-    //         : condition;
-
-    //     let code = `if (${cleanCondition}) {\n`;
-    //     this.enterScope();
-    //     code += this.visit(ctx.suite(0));
-    //     this.leaveScope();
-    //     code += '\n' + this.getIndent() + '}';
-
-    //     const elseIfs = ctx.KUTI() || [];
-    //     for (let i = 0; i < elseIfs.length; i++) {
-    //         const elseIfCondition = this.visit(ctx.expression(i + 1));
-
-    //         // Clean each else-if condition too
-    //         const cleanElseIfCond = elseIfCondition.startsWith('(') && elseIfCondition.endsWith(')')
-    //             ? elseIfCondition.slice(1, -1)
-    //             : elseIfCondition;
-
-    //         code += ` else if (${cleanElseIfCond}) {\n`;
-    //         this.enterScope();
-    //         code += this.visit(ctx.suite(i + 1));
-    //         this.leaveScope();
-    //         code += '\n' + this.getIndent() + '}';
-    //     }
-
-    //     if (ctx.ZVIMWE()) {
-    //         code += ` else {\n`;
-    //         this.enterScope();
-    //         code += this.visit(ctx.suite().at(-1));
-    //         this.leaveScope();
-    //         code += '\n' + this.getIndent() + '}';
-    //     }
-
-    //     return this.removeTrailingCommas(code);
-    // }
 
     visitConditionalStatement(ctx) {
         const condition = this.visit(ctx.expression(0));
@@ -2264,19 +2252,81 @@ ${setupCode}
     =            IMPORTS & NETWORKING             =
     ============================================= */
 
-    // visitImportStatement(ctx) {
-    //     if (this.target !== 'node') {
-    //         console.warn("Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.");
-    //         return `// Import for '${ctx.ID(0).getText()}' ignored in browser target.`;
-    //     }
-    //     const symbol = ctx.ID(0).getText();
-    //     const module = ctx.ID(1).getText();
-    //     if (!this.imports.has(module)) this.imports.set(module, new Set());
-    //     this.imports.get(module).add(symbol);
-    //     return "";
-    // }
+//     visitImportStatement(ctx) {
+//     const symbol = ctx.ID(0).getText();
+    
+//     // Get the module path - could be ID or STRING
+//     let modulePath;
+//     if (ctx.ID(1)) {
+//         modulePath = ctx.ID(1).getText();
+//     } else if (ctx.STRING && ctx.STRING()) {
+//         // Remove quotes from string
+//         modulePath = ctx.STRING().getText().replace(/^["']|["']$/g, '');
+//     } else {
+//         console.warn(`Invalid import statement: ${ctx.getText()}`);
+//         return '';
+//     }
+    
+//     // Check if this is a component import using various heuristics:
+//     // 1. Ends with .shonax or .shonax.js
+//     // 2. Contains path separators (/ or .)
+//     // 3. Ends with "Component" (naming convention)
+//     // 4. Starts with uppercase letter (component convention)
+//     const isComponentImport = 
+//         modulePath.endsWith('.shonax') || 
+//         modulePath.endsWith('.shonax.js') ||
+//         modulePath.includes('/') || 
+//         modulePath.startsWith('.') ||
+//         modulePath.endsWith('Component') ||
+//         /^[A-Z]/.test(modulePath); // Starts with uppercase
+    
+//     if (isComponentImport) {
+//         // Convert module path to proper import path
+//         let importPath = modulePath;
+        
+//         // If it ends with Component, assume it's a .js file
+//         if (modulePath.endsWith('Component')) {
+//             importPath = `./${modulePath}.js`;
+//         } else if (!modulePath.includes('/') && !modulePath.startsWith('.')) {
+//             // Simple ID that starts with uppercase - assume local component
+//             importPath = `./${modulePath}.js`;
+//         } else if (modulePath.endsWith('.shonax')) {
+//             // Convert .shonax to .js
+//             importPath = modulePath.replace(/\.shonax$/, '.js');
+//         } else if (!modulePath.endsWith('.js')) {
+//             // Add .js extension if missing
+//             importPath = modulePath + '.js';
+//         }
+        
+//         // Store component import
+//         if (!this.componentImports.has(importPath)) {
+//             this.componentImports.set(importPath, new Set());
+//         }
+//         this.componentImports.get(importPath).add(symbol);
+        
+//         // Return empty string as this will be handled in the header
+//         return "";
+//     }
+    
+//     // Handle regular Node.js imports (existing logic)
+//     if (this.target !== 'node' && this.target !== 'component') {
+//         console.warn(`Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.`);
+//         return `// Import for '${symbol}' ignored in browser target.`;
+//     }
+    
+//     // In component mode, non-component imports are ignored
+//     if (this.target === 'component') {
+//         return `// Import for '${symbol}' ignored in browser target.`;
+//     }
+    
+//     if (!this.imports.has(modulePath)) {
+//         this.imports.set(modulePath, new Set());
+//     }
+//     this.imports.get(modulePath).add(symbol);
+//     return "";
+// }
 
-    visitImportStatement(ctx) {
+visitImportStatement(ctx) {
     const symbol = ctx.ID(0).getText();
     
     // Get the module path - could be ID or STRING
@@ -2291,55 +2341,21 @@ ${setupCode}
         return '';
     }
     
-    // Check if this is a component import using various heuristics:
-    // 1. Ends with .shonax or .shonax.js
-    // 2. Contains path separators (/ or .)
-    // 3. Ends with "Component" (naming convention)
-    // 4. Starts with uppercase letter (component convention)
-    const isComponentImport = 
-        modulePath.endsWith('.shonax') || 
-        modulePath.endsWith('.shonax.js') ||
-        modulePath.includes('/') || 
-        modulePath.startsWith('.') ||
-        modulePath.endsWith('Component') ||
-        /^[A-Z]/.test(modulePath); // Starts with uppercase
-    
-    if (isComponentImport) {
-        // Convert module path to proper import path
-        let importPath = modulePath;
-        
-        // If it ends with Component, assume it's a .js file
-        if (modulePath.endsWith('Component')) {
-            importPath = `./${modulePath}.js`;
-        } else if (!modulePath.includes('/') && !modulePath.startsWith('.')) {
-            // Simple ID that starts with uppercase - assume local component
-            importPath = `./${modulePath}.js`;
-        } else if (modulePath.endsWith('.shonax')) {
-            // Convert .shonax to .js
-            importPath = modulePath.replace(/\.shonax$/, '.js');
-        } else if (!modulePath.endsWith('.js')) {
-            // Add .js extension if missing
-            importPath = modulePath + '.js';
+    // In component mode, generate the actual import statement
+    if (this.target === 'component') {
+        // Store for later use in the import header
+        if (!this.componentImports.has(modulePath)) {
+            this.componentImports.set(modulePath, new Set());
         }
+        this.componentImports.get(modulePath).add(symbol);
         
-        // Store component import
-        if (!this.componentImports.has(importPath)) {
-            this.componentImports.set(importPath, new Set());
-        }
-        this.componentImports.get(importPath).add(symbol);
-        
-        // Return empty string as this will be handled in the header
-        return "";
+        // Return empty string - the import will be added to the header
+        return '';
     }
     
     // Handle regular Node.js imports (existing logic)
-    if (this.target !== 'node' && this.target !== 'component') {
+    if (this.target !== 'node') {
         console.warn(`Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.`);
-        return `// Import for '${symbol}' ignored in browser target.`;
-    }
-    
-    // In component mode, non-component imports are ignored
-    if (this.target === 'component') {
         return `// Import for '${symbol}' ignored in browser target.`;
     }
     

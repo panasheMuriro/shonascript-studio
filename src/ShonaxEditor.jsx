@@ -593,7 +593,7 @@ const createVirtualFileSystem = (files, currentFile) => {
 };
 
 const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
-  // Create virtual file system with all compiled components
+  // Create virtual file system with all compiled components AND regular shona files
   const virtualFS = {};
   
   files.forEach(file => {
@@ -614,7 +614,30 @@ const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
         ];
         
         paths.forEach(path => {
-          virtualFS[path] = compiledCode;
+          virtualFS[path] = { type: 'component', code: compiledCode };
+        });
+      } catch (error) {
+        console.error(`Error compiling ${file.path}:`, error);
+      }
+    } else if (file.path.endsWith('.shona')) {
+      // Add support for regular .shona files
+      try {
+        const compiledCode = translateShona(file.content, {
+          target: 'browser'
+        });
+        
+        // Wrap the code to export functions
+        const wrappedCode = wrapShonaModule(compiledCode);
+        
+        const paths = [
+          `./${file.name.replace('.shona', '.js')}`,
+          `./${file.name.replace('.shona', '')}`,
+          file.name.replace('.shona', '.js'),
+          file.name.replace('.shona', '')
+        ];
+        
+        paths.forEach(path => {
+          virtualFS[path] = { type: 'module', code: wrappedCode };
         });
       } catch (error) {
         console.error(`Error compiling ${file.path}:`, error);
@@ -666,41 +689,74 @@ const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
 <body>
     <div id="root"></div>
     <script>
-        // Virtual file system with compiled components
+        // Virtual file system with compiled components and modules
         const virtualFS = ${JSON.stringify(virtualFS)};
         const moduleCache = {};
         
-        // Transform ES module code to be executable in browser
-        function transformModuleCode(code, modulePath) {
-            let transformedCode = code;
-            
-            // Replace export default with a return statement
-            transformedCode = transformedCode.replace(
-                /export\\s+default\\s+function\\s+(\\w+)/g,
-                'const $1 = function'
-            );
-            
-            // Handle imports
-            transformedCode = transformedCode.replace(
-                /import\\s+(\\w+)\\s+from\\s+['"](.*?)['"]/g,
-                (match, name, path) => {
-                    // This will be replaced with actual imported component
-                    return \`const \${name} = window.__imports['\${path}'];\`;
-                }
-            );
-            
-            // Remove any remaining export statements
-            transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
-            transformedCode = transformedCode.replace(/export\\s+default\\s+/g, '');
-            
-            // Return the main component at the end
-            const componentMatch = transformedCode.match(/const\\s+(\\w+)\\s+=\\s+function/);
-            if (componentMatch) {
-                transformedCode += \`\\n; window.__currentModule = \${componentMatch[1]};\`;
-            }
-            
-            return transformedCode;
+        // Helper functions that will be available in all modules
+        function $$createText(data){
+            if (data && data.nodeType) return data;
+            return document.createTextNode(data);
         }
+        function $$listen(node,e,h){node.addEventListener(e,h);}
+        function $$setAttribute(n,a,v){
+            if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
+            else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
+            else{n.setAttribute(a,v);}
+        }
+        
+        // Transform ES module code to be executable in browser
+       function transformModuleCode(code, modulePath, moduleType) {
+    let transformedCode = code;
+    
+    if (moduleType === 'component') {
+        // Handle component modules
+        transformedCode = transformedCode.replace(
+            /export\\s+default\\s+function\\s+(\\w+)/g,
+            'const $1 = function'
+        );
+        
+        // Handle imports - both default and named
+        transformedCode = transformedCode.replace(
+            /import\\s+(\\w+)\\s+from\\s+['"](.*?)['"]/g,
+            (match, name, path) => {
+                // The module should already be loaded in window.__imports
+                return \`const \${name} = window.__imports['\${path}'] || window.__imports['\${path}.js'] || window.__imports['./\${path}'] || window.__imports['./\${path}.js'];\`;
+            }
+        );
+        
+        // Remove export statements
+        transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
+        transformedCode = transformedCode.replace(/export\\s+default\\s+/g, '');
+        
+        // Return the main component
+        const componentMatch = transformedCode.match(/const\\s+(\\w+)\\s+=\\s+function/);
+        if (componentMatch) {
+            transformedCode += \`\\n; window.__currentModule = \${componentMatch[1]};\`;
+        }
+    } else if (moduleType === 'module') {
+        // Handle regular .shona modules
+        // Remove export statements but keep the functions
+        transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
+        transformedCode = transformedCode.replace(/export\\s+default\\s+{[^}]*}/g, '');
+        
+        // Extract all functions and create an object
+        const functions = {};
+        const functionMatches = [...transformedCode.matchAll(/function\\s+(\\w+)\\s*\\([^)]*\\)\\s*{/g)];
+        
+        for (const match of functionMatches) {
+            functions[match[1]] = match[1];
+        }
+        
+        // Create module export
+        if (Object.keys(functions).length > 0) {
+            const funcList = Object.keys(functions).join(', ');
+            transformedCode += \`\\n; window.__currentModule = { \${funcList} };\`;
+        }
+    }
+    
+    return transformedCode;
+}
         
         // Load a module from virtual FS
         function loadModule(path) {
@@ -718,12 +774,18 @@ const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
             for (const p of possiblePaths) {
                 if (virtualFS[p]) {
                     if (!moduleCache[p]) {
-                        const code = virtualFS[p];
-                        const transformedCode = transformModuleCode(code, p);
+                        const moduleInfo = virtualFS[p];
+                        const code = moduleInfo.code;
+                        const transformedCode = transformModuleCode(code, p, moduleInfo.type);
                         
-                        // Create a function that returns the module
-                        const moduleFunc = new Function(transformedCode + '; return window.__currentModule;');
-                        moduleCache[p] = moduleFunc();
+                        try {
+                            // Create a function that returns the module
+                            const moduleFunc = new Function(transformedCode + '; return window.__currentModule;');
+                            moduleCache[p] = moduleFunc();
+                        } catch (error) {
+                            console.error('Error loading module', p, error);
+                            moduleCache[p] = null;
+                        }
                     }
                     return moduleCache[p];
                 }
@@ -742,7 +804,10 @@ const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
         
         for (const match of importMatches) {
             const [, name, path] = match;
-            window.__imports[path] = loadModule(path);
+            const module = loadModule(path);
+            if (module) {
+                window.__imports[path] = module;
+            }
         }
         
         // Console override
@@ -798,7 +863,7 @@ const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
         (function() {
             try {
                 // Transform and execute the main component code
-                const transformedMainCode = transformModuleCode(mainCode, 'main');
+                const transformedMainCode = transformModuleCode(mainCode, 'main', 'component');
                 
                 // Execute the transformed code
                 const executeCode = new Function(transformedMainCode + '; return window.__currentModule;');
@@ -826,6 +891,40 @@ const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
     </script>
 </body>
 </html>`;
+};
+
+const wrapShonaModule = (jsCode) => {
+  // Remove the helper functions and IIFE wrapper
+  let cleanCode = jsCode;
+  
+  // Remove the helper functions block
+  cleanCode = cleanCode.replace(/function \$\$createText[\s\S]*?function _runEffects\(\)[^}]*}/m, '');
+  
+  // Remove the wrapping (function(){ ... })();
+  cleanCode = cleanCode.replace(/^\s*\(\s*function\s*\(\)\s*{\s*/m, '');
+  cleanCode = cleanCode.replace(/\s*}\s*\)\s*\(\s*\)\s*;\s*$/m, '');
+  
+  // Extract all function declarations
+  const exportedFunctions = [];
+  
+  // Match function declarations (like "function sanganisa")
+  const funcMatches = cleanCode.matchAll(/function\s+(\w+)\s*\([^)]*\)/gm);
+  for (const match of funcMatches) {
+    exportedFunctions.push(match[1]);
+  }
+  
+  // Build the export statement
+  if (exportedFunctions.length > 0) {
+    // Export each function as a named export
+    const exports = exportedFunctions.map(fn => `export { ${fn} };`).join('\n');
+    
+    // Also create a default export with all functions
+    const defaultExport = `\nexport default { ${exportedFunctions.join(', ')} };`;
+    
+    return `${cleanCode}\n${exports}\n${defaultExport}`;
+  }
+  
+  return cleanCode;
 };
 
   const createPreviewHtml = (jsCode) => {
