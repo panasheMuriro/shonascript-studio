@@ -44,8 +44,33 @@ const debounce = (func, wait) => {
 };
 
 const ShonaxEditor = () => {
-  // File management state
-  const [files, setFiles] = useState([
+  // Initialize with empty arrays/null
+  const [files, setFiles] = useState([]);
+  const [currentFile, setCurrentFile] = useState(null);
+  const [openTabs, setOpenTabs] = useState([]);
+  const [showFileManager, setShowFileManager] = useState(true);
+  
+  // Editor state - initialize with empty string
+  const [code, setCode] = useState('');
+  const [compiledCode, setCompiledCode] = useState('');
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [errors, setErrors] = useState([]);
+  const [warnings, setWarnings] = useState([]);
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeTab, setActiveTab] = useState('preview');
+  const [editorTheme, setEditorTheme] = useState('shonax-dark');
+  const [consoleMessages, setConsoleMessages] = useState([]);
+  const [filesInitialized, setFilesInitialized] = useState(false);
+  
+  const monacoRef = useRef(null);
+  const editorRef = useRef(null);
+  const previewRef = useRef(null);
+  const consoleEndRef = useRef(null);
+
+  // Default file contents
+  const DEFAULT_FILES = [
     {
       type: 'file',
       name: 'main.shonax',
@@ -60,7 +85,7 @@ basa increment():
 <div class="container">
     <h1>Shonax Counter Demo</h1>
     <p>Current count: {count}</p>
-    <button rikabayiwa={increment}>
+    <button class="bg-green" rikabayiwa={increment}>
         Increment Counter
     </button>
     
@@ -92,29 +117,55 @@ basa main():
 main()`,
       modified: false
     }
-  ]);
+  ];
 
-  const [currentFile, setCurrentFile] = useState(files[0]);
-  const [openTabs, setOpenTabs] = useState([files[0]]);
-  const [showFileManager, setShowFileManager] = useState(true);
-  
-  // Editor state
-  const [code, setCode] = useState(files[0].content);
-  const [compiledCode, setCompiledCode] = useState('');
-  const [previewHtml, setPreviewHtml] = useState('');
-  const [errors, setErrors] = useState([]);
-  const [warnings, setWarnings] = useState([]);
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeTab, setActiveTab] = useState('preview');
-  const [editorTheme, setEditorTheme] = useState('shonax-dark');
-  const [consoleMessages, setConsoleMessages] = useState([]);
-  
-  const monacoRef = useRef(null);
-  const editorRef = useRef(null);
-  const previewRef = useRef(null);
-  const consoleEndRef = useRef(null);
+  // Initialize files on mount - single source of truth
+  useEffect(() => {
+    if (filesInitialized) return; // Prevent re-initialization
+    
+    // Check localStorage first
+    const savedFiles = [];
+    const savedFilePaths = new Set();
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('shonax_file_')) {
+        const path = key.replace('shonax_file_', '');
+        const content = localStorage.getItem(key);
+        if (content) {
+          savedFiles.push({
+            type: 'file',
+            name: path.split('/').pop(),
+            path,
+            content,
+            modified: false
+          });
+          savedFilePaths.add(path);
+        }
+      }
+    }
+    
+    // Only add default files if they don't exist in localStorage
+    const filesToUse = [...savedFiles];
+    for (const defaultFile of DEFAULT_FILES) {
+      if (!savedFilePaths.has(defaultFile.path)) {
+        filesToUse.push(defaultFile);
+        // Save default files to localStorage
+        localStorage.setItem(`shonax_file_${defaultFile.path}`, defaultFile.content);
+      }
+    }
+    
+    // Set files and select the first one
+    if (filesToUse.length > 0) {
+      setFiles(filesToUse);
+      const firstFile = filesToUse[0];
+      setCurrentFile(firstFile);
+      setCode(firstFile.content);
+      setOpenTabs([firstFile]);
+    }
+    
+    setFilesInitialized(true);
+  }, []); // Run only once on mount
 
   // Configure Monaco on mount
   const handleEditorWillMount = (monaco) => {
@@ -260,9 +311,10 @@ main()`,
 
   // File operations
   const handleFileSelect = (file) => {
-    // Save current file changes
+    // Save current file changes to localStorage before switching
     if (currentFile && code !== currentFile.content) {
       updateFileContent(currentFile.path, code);
+      localStorage.setItem(`shonax_file_${currentFile.path}`, code);
     }
 
     setCurrentFile(file);
@@ -275,6 +327,16 @@ main()`,
   };
 
   const handleFileCreate = (path, content = '') => {
+    // Check if file already exists
+    if (files.find(f => f.path === path)) {
+      console.warn(`File ${path} already exists`);
+      // Generate a unique name
+      const timestamp = Date.now();
+      const extension = path.includes('.') ? path.split('.').pop() : 'shonax';
+      const baseName = path.includes('.') ? path.split('.').slice(0, -1).join('.') : path;
+      path = `${baseName}-${timestamp}.${extension}`;
+    }
+    
     // Determine default content based on file extension
     let defaultContent = content;
     if (!content) {
@@ -295,37 +357,55 @@ main()`,
     
     setFiles([...files, newFile]);
     handleFileSelect(newFile);
+    
+    // Save to localStorage immediately
+    localStorage.setItem(`shonax_file_${path}`, defaultContent);
   };
 
-
-const handleFileDelete = (path) => {
-  // Remove from localStorage
-  const storageKey = `shonax_file_${path}`;
-  localStorage.removeItem(storageKey);
-  
-  // Remove from state
-  setFiles(files.filter(f => f.path !== path));
-  setOpenTabs(openTabs.filter(t => t.path !== path));
-  
-  // If the deleted file was the current file, switch to another
-  if (currentFile?.path === path) {
-    const remainingFile = files.find(f => f.path !== path);
-    if (remainingFile) {
-      handleFileSelect(remainingFile);
-    } else {
-      setCurrentFile(null);
-      setCode('');
+  const handleFileDelete = (path) => {
+    // Show confirmation dialog
+    const fileToDelete = files.find(f => f.path === path);
+    if (!fileToDelete) return;
+    
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${fileToDelete.name}"? This action cannot be undone.`
+    );
+    
+    if (!confirmDelete) return;
+    
+    // Remove from localStorage
+    const storageKey = `shonax_file_${path}`;
+    localStorage.removeItem(storageKey);
+    
+    // Remove from state
+    setFiles(files.filter(f => f.path !== path));
+    setOpenTabs(openTabs.filter(t => t.path !== path));
+    
+    // If the deleted file was the current file, switch to another
+    if (currentFile?.path === path) {
+      const remainingFile = files.find(f => f.path !== path);
+      if (remainingFile) {
+        handleFileSelect(remainingFile);
+      } else {
+        setCurrentFile(null);
+        setCode('');
+        setCompiledCode('');
+        setPreviewHtml('');
+      }
     }
-  }
-  
-  // Optional: Log deletion for debugging
-  console.log(`Deleted file: ${path} from localStorage`);
-};
+    
+    console.log(`Deleted file: ${path} from localStorage`);
+  };
 
   const handleFileRename = (oldPath, newName) => {
+    // Remove old file from localStorage
+    localStorage.removeItem(`shonax_file_${oldPath}`);
+    
     const updatedFiles = files.map(f => {
       if (f.path === oldPath) {
         const newPath = oldPath.replace(f.name, newName);
+        // Save with new name to localStorage
+        localStorage.setItem(`shonax_file_${newPath}`, f.content);
         return { ...f, name: newName, path: newPath };
       }
       return f;
@@ -391,6 +471,11 @@ const handleFileDelete = (path) => {
   };
 
   const handleCloseTab = (tab) => {
+    // Save before closing if modified
+    if (tab.modified && tab.path === currentFile?.path) {
+      handleSaveFile();
+    }
+    
     const newTabs = openTabs.filter(t => t.path !== tab.path);
     setOpenTabs(newTabs);
     
@@ -431,55 +516,55 @@ const handleFileDelete = (path) => {
     setConsoleMessages([]);
   }, [code]);
 
-const compileCode = useCallback(
-  debounce(async (sourceCode, fileName) => {
-    if (!fileName) return;
-    
-    setIsCompiling(true);
-    setErrors([]);
-    setWarnings([]);
-    
-    try {
-      const isShonax = fileName.endsWith('.shonax');
-      const isShona = fileName.endsWith('.shona');
+  const compileCode = useCallback(
+    debounce(async (sourceCode, fileName) => {
+      if (!fileName) return;
       
-      let jsCode = '';
+      setIsCompiling(true);
+      setErrors([]);
+      setWarnings([]);
       
-      if (isShonax) {
-        // Component file - use component compiler
-        const componentName = fileName.replace(/\.(shonax|shona)$/, '');
-        jsCode = compileComponent(sourceCode, componentName, {
-          target: 'component',
-          generateSourceMap: true
-        });
+      try {
+        const isShonax = fileName.endsWith('.shonax');
+        const isShona = fileName.endsWith('.shona');
         
-        // Use the new preview HTML with import support
-        const previewHtml = createPreviewHtmlWithImports(jsCode, files, currentFile);
-        setPreviewHtml(previewHtml);
-      } else if (isShona) {
-        // Regular Shona script - use regular translator
-        jsCode = translateShona(sourceCode, {
-          target: 'browser'
-        });
+        let jsCode = '';
         
-        // Create a simple HTML wrapper for non-component scripts
-        const scriptHtml = createScriptHtml(jsCode);
-        setPreviewHtml(scriptHtml);
-      } else {
-        throw new Error('Unsupported file type. Use .shona or .shonax extension.');
+        if (isShonax) {
+          // Component file - use component compiler
+          const componentName = fileName.replace(/\.(shonax|shona)$/, '');
+          jsCode = compileComponent(sourceCode, componentName, {
+            target: 'component',
+            generateSourceMap: true
+          });
+          
+          // Use the new preview HTML with import support
+          const previewHtml = createPreviewHtmlWithImports(jsCode, files, currentFile);
+          setPreviewHtml(previewHtml);
+        } else if (isShona) {
+          // Regular Shona script - use regular translator
+          jsCode = translateShona(sourceCode, {
+            target: 'browser'
+          });
+          
+          // Create a simple HTML wrapper for non-component scripts
+          const scriptHtml = createScriptHtml(jsCode);
+          setPreviewHtml(scriptHtml);
+        } else {
+          throw new Error('Unsupported file type. Use .shona or .shonax extension.');
+        }
+        
+        setCompiledCode(jsCode);
+        
+      } catch (error) {
+        console.error('Compilation error:', error);
+        setErrors([error.message]);
+      } finally {
+        setIsCompiling(false);
       }
-      
-      setCompiledCode(jsCode);
-      
-    } catch (error) {
-      console.error('Compilation error:', error);
-      setErrors([error.message]);
-    } finally {
-      setIsCompiling(false);
-    }
-  }, 500),
-  [files, currentFile]
-);
+    }, 500),
+    [files, currentFile]
+  );
 
   // Create HTML for non-component scripts
   const createScriptHtml = (jsCode) => {
@@ -572,92 +657,92 @@ const compileCode = useCallback(
 </body>
 </html>`;
   };
-  // Add this near the top of your ShonaxEditor component
-const createVirtualFileSystem = (files, currentFile) => {
-  const fileMap = {};
-  
-  files.forEach(file => {
-    // Convert file path to a module path
-    const modulePath = file.path.replace(/\.(shonax|shona)$/, '.js');
+
+  const createVirtualFileSystem = (files, currentFile) => {
+    const fileMap = {};
     
-    // Compile the file content if it's a component
-    if (file.path.endsWith('.shonax')) {
-      try {
-        const compiledCode = compileComponent(file.content, 
-          file.name.replace(/\.(shonax|shona)$/, ''), 
-          {
+    files.forEach(file => {
+      // Convert file path to a module path
+      const modulePath = file.path.replace(/\.(shonax|shona)$/, '.js');
+      
+      // Compile the file content if it's a component
+      if (file.path.endsWith('.shonax')) {
+        try {
+          const compiledCode = compileComponent(file.content, 
+            file.name.replace(/\.(shonax|shona)$/, ''), 
+            {
+              target: 'component',
+              generateSourceMap: false
+            }
+          );
+          fileMap[modulePath] = compiledCode;
+          fileMap[`./${modulePath}`] = compiledCode;
+          fileMap[`/${modulePath}`] = compiledCode;
+        } catch (error) {
+          console.error(`Error compiling ${file.path}:`, error);
+        }
+      }
+    });
+    
+    return fileMap;
+  };
+
+  const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
+    // Create virtual file system with all compiled components AND regular shona files
+    const virtualFS = {};
+    
+    files.forEach(file => {
+      if (file.path.endsWith('.shonax')) {
+        try {
+          const moduleName = file.name.replace(/\.(shonax|shona)$/, '');
+          const compiledCode = compileComponent(file.content, moduleName, {
             target: 'component',
             generateSourceMap: false
-          }
-        );
-        fileMap[modulePath] = compiledCode;
-        fileMap[`./${modulePath}`] = compiledCode;
-        fileMap[`/${modulePath}`] = compiledCode;
-      } catch (error) {
-        console.error(`Error compiling ${file.path}:`, error);
+          });
+          
+          // Store with multiple possible paths
+          const paths = [
+            `./${file.name.replace('.shonax', '.js')}`,
+            `./${file.name.replace('.shonax', '')}`,
+            file.name.replace('.shonax', '.js'),
+            file.name.replace('.shonax', '')
+          ];
+          
+          paths.forEach(path => {
+            virtualFS[path] = { type: 'component', code: compiledCode };
+          });
+        } catch (error) {
+          console.error(`Error compiling ${file.path}:`, error);
+        }
+      } else if (file.path.endsWith('.shona')) {
+        // Add support for regular .shona files
+        try {
+          const compiledCode = translateShona(file.content, {
+            target: 'browser'
+          });
+          
+          // Wrap the code to export functions
+          const wrappedCode = wrapShonaModule(compiledCode);
+          
+          const paths = [
+            `./${file.name.replace('.shona', '.js')}`,
+            `./${file.name.replace('.shona', '')}`,
+            file.name.replace('.shona', '.js'),
+            file.name.replace('.shona', '')
+          ];
+          
+          paths.forEach(path => {
+            virtualFS[path] = { type: 'module', code: wrappedCode };
+          });
+        } catch (error) {
+          console.error(`Error compiling ${file.path}:`, error);
+        }
       }
-    }
-  });
-  
-  return fileMap;
-};
+    });
 
-const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
-  // Create virtual file system with all compiled components AND regular shona files
-  const virtualFS = {};
-  
-  files.forEach(file => {
-    if (file.path.endsWith('.shonax')) {
-      try {
-        const moduleName = file.name.replace(/\.(shonax|shona)$/, '');
-        const compiledCode = compileComponent(file.content, moduleName, {
-          target: 'component',
-          generateSourceMap: false
-        });
-        
-        // Store with multiple possible paths
-        const paths = [
-          `./${file.name.replace('.shonax', '.js')}`,
-          `./${file.name.replace('.shonax', '')}`,
-          file.name.replace('.shonax', '.js'),
-          file.name.replace('.shonax', '')
-        ];
-        
-        paths.forEach(path => {
-          virtualFS[path] = { type: 'component', code: compiledCode };
-        });
-      } catch (error) {
-        console.error(`Error compiling ${file.path}:`, error);
-      }
-    } else if (file.path.endsWith('.shona')) {
-      // Add support for regular .shona files
-      try {
-        const compiledCode = translateShona(file.content, {
-          target: 'browser'
-        });
-        
-        // Wrap the code to export functions
-        const wrappedCode = wrapShonaModule(compiledCode);
-        
-        const paths = [
-          `./${file.name.replace('.shona', '.js')}`,
-          `./${file.name.replace('.shona', '')}`,
-          file.name.replace('.shona', '.js'),
-          file.name.replace('.shona', '')
-        ];
-        
-        paths.forEach(path => {
-          virtualFS[path] = { type: 'module', code: wrappedCode };
-        });
-      } catch (error) {
-        console.error(`Error compiling ${file.path}:`, error);
-      }
-    }
-  });
-
-  const componentName = currentFile?.name.replace(/\.(shonax|shona)$/, '') || 'ShonaxComponent';
-  
-  return `<!DOCTYPE html>
+    const componentName = currentFile?.name.replace(/\.(shonax|shona)$/, '') || 'ShonaxComponent';
+    
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -716,57 +801,57 @@ const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
         }
         
         // Transform ES module code to be executable in browser
-       function transformModuleCode(code, modulePath, moduleType) {
-    let transformedCode = code;
-    
-    if (moduleType === 'component') {
-        // Handle component modules
-        transformedCode = transformedCode.replace(
-            /export\\s+default\\s+function\\s+(\\w+)/g,
-            'const $1 = function'
-        );
-        
-        // Handle imports - both default and named
-        transformedCode = transformedCode.replace(
-            /import\\s+(\\w+)\\s+from\\s+['"](.*?)['"]/g,
-            (match, name, path) => {
-                // The module should already be loaded in window.__imports
-                return \`const \${name} = window.__imports['\${path}'] || window.__imports['\${path}.js'] || window.__imports['./\${path}'] || window.__imports['./\${path}.js'];\`;
+        function transformModuleCode(code, modulePath, moduleType) {
+            let transformedCode = code;
+            
+            if (moduleType === 'component') {
+                // Handle component modules
+                transformedCode = transformedCode.replace(
+                    /export\\s+default\\s+function\\s+(\\w+)/g,
+                    'const $1 = function'
+                );
+                
+                // Handle imports - both default and named
+                transformedCode = transformedCode.replace(
+                    /import\\s+(\\w+)\\s+from\\s+['"](.*?)['"]/g,
+                    (match, name, path) => {
+                        // The module should already be loaded in window.__imports
+                        return \`const \${name} = window.__imports['\${path}'] || window.__imports['\${path}.js'] || window.__imports['./\${path}'] || window.__imports['./\${path}.js'];\`;
+                    }
+                );
+                
+                // Remove export statements
+                transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
+                transformedCode = transformedCode.replace(/export\\s+default\\s+/g, '');
+                
+                // Return the main component
+                const componentMatch = transformedCode.match(/const\\s+(\\w+)\\s+=\\s+function/);
+                if (componentMatch) {
+                    transformedCode += \`\\n; window.__currentModule = \${componentMatch[1]};\`;
+                }
+            } else if (moduleType === 'module') {
+                // Handle regular .shona modules
+                // Remove export statements but keep the functions
+                transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
+                transformedCode = transformedCode.replace(/export\\s+default\\s+{[^}]*}/g, '');
+                
+                // Extract all functions and create an object
+                const functions = {};
+                const functionMatches = [...transformedCode.matchAll(/function\\s+(\\w+)\\s*\\([^)]*\\)\\s*{/g)];
+                
+                for (const match of functionMatches) {
+                    functions[match[1]] = match[1];
+                }
+                
+                // Create module export
+                if (Object.keys(functions).length > 0) {
+                    const funcList = Object.keys(functions).join(', ');
+                    transformedCode += \`\\n; window.__currentModule = { \${funcList} };\`;
+                }
             }
-        );
-        
-        // Remove export statements
-        transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
-        transformedCode = transformedCode.replace(/export\\s+default\\s+/g, '');
-        
-        // Return the main component
-        const componentMatch = transformedCode.match(/const\\s+(\\w+)\\s+=\\s+function/);
-        if (componentMatch) {
-            transformedCode += \`\\n; window.__currentModule = \${componentMatch[1]};\`;
+            
+            return transformedCode;
         }
-    } else if (moduleType === 'module') {
-        // Handle regular .shona modules
-        // Remove export statements but keep the functions
-        transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
-        transformedCode = transformedCode.replace(/export\\s+default\\s+{[^}]*}/g, '');
-        
-        // Extract all functions and create an object
-        const functions = {};
-        const functionMatches = [...transformedCode.matchAll(/function\\s+(\\w+)\\s*\\([^)]*\\)\\s*{/g)];
-        
-        for (const match of functionMatches) {
-            functions[match[1]] = match[1];
-        }
-        
-        // Create module export
-        if (Object.keys(functions).length > 0) {
-            const funcList = Object.keys(functions).join(', ');
-            transformedCode += \`\\n; window.__currentModule = { \${funcList} };\`;
-        }
-    }
-    
-    return transformedCode;
-}
         
         // Load a module from virtual FS
         function loadModule(path) {
@@ -901,179 +986,45 @@ const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
     </script>
 </body>
 </html>`;
-};
+  };
 
-const wrapShonaModule = (jsCode) => {
-  // Remove the helper functions and IIFE wrapper
-  let cleanCode = jsCode;
-  
-  // Remove the helper functions block
-  cleanCode = cleanCode.replace(/function \$\$createText[\s\S]*?function _runEffects\(\)[^}]*}/m, '');
-  
-  // Remove the wrapping (function(){ ... })();
-  cleanCode = cleanCode.replace(/^\s*\(\s*function\s*\(\)\s*{\s*/m, '');
-  cleanCode = cleanCode.replace(/\s*}\s*\)\s*\(\s*\)\s*;\s*$/m, '');
-  
-  // Extract all function declarations
-  const exportedFunctions = [];
-  
-  // Match function declarations (like "function sanganisa")
-  const funcMatches = cleanCode.matchAll(/function\s+(\w+)\s*\([^)]*\)/gm);
-  for (const match of funcMatches) {
-    exportedFunctions.push(match[1]);
-  }
-  
-  // Build the export statement
-  if (exportedFunctions.length > 0) {
-    // Export each function as a named export
-    const exports = exportedFunctions.map(fn => `export { ${fn} };`).join('\n');
+  const wrapShonaModule = (jsCode) => {
+    // Remove the helper functions and IIFE wrapper
+    let cleanCode = jsCode;
     
-    // Also create a default export with all functions
-    const defaultExport = `\nexport default { ${exportedFunctions.join(', ')} };`;
+    // Remove the helper functions block
+    cleanCode = cleanCode.replace(/function \$\$createText[\s\S]*?function _runEffects\(\)[^}]*}/m, '');
     
-    return `${cleanCode}\n${exports}\n${defaultExport}`;
-  }
-  
-  return cleanCode;
-};
-
-  const createPreviewHtml = (jsCode) => {
-  // Don't remove the export statement - keep it as a module
-  const componentName = currentFile?.name.replace(/\.(shonax|shona)$/, '') || 'ShonaxComponent';
-  
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shonax Preview</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding: 20px;
-            background: #f5f5f5;
-            color: #333;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .warning { color: #ff9800; }
-        .info { color: #2196f3; }
-        button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background: #45a049;
-        }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script type="module">
-        // Store original console methods
-        const originalConsole = {
-            log: console.log.bind(console),
-            error: console.error.bind(console),
-            warn: console.warn.bind(console),
-            info: console.info.bind(console)
-        };
-
-        // Override console methods to send messages to parent
-        const sendConsoleMessage = (method, args) => {
-            try {
-                const processedArgs = [];
-                for (let i = 0; i < args.length; i++) {
-                    const arg = args[i];
-                    if (arg === undefined) {
-                        processedArgs.push('undefined');
-                    } else if (arg === null) {
-                        processedArgs.push('null');
-                    } else if (typeof arg === 'function') {
-                        processedArgs.push('[Function: ' + (arg.name || 'anonymous') + ']');
-                    } else if (typeof arg === 'object') {
-                        try {
-                            processedArgs.push(JSON.stringify(arg, null, 2));
-                        } catch (e) {
-                            processedArgs.push('[Object]');
-                        }
-                    } else {
-                        processedArgs.push(String(arg));
-                    }
-                }
-                
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({
-                        type: 'console',
-                        method: method,
-                        args: processedArgs
-                    }, '*');
-                }
-                
-                originalConsole[method](...args);
-            } catch (error) {
-                originalConsole.error('Console override error:', error);
-            }
-        };
-
-        console.log = function() { sendConsoleMessage('log', arguments); };
-        console.error = function() { sendConsoleMessage('error', arguments); };
-        console.warn = function() { sendConsoleMessage('warn', arguments); };
-        console.info = function() { sendConsoleMessage('info', arguments); };
-
-        // Create a blob URL for the component module
-        const moduleCode = ${JSON.stringify(jsCode)};
-        const blob = new Blob([moduleCode], { type: 'application/javascript' });
-        const moduleUrl = URL.createObjectURL(blob);
-
-        // Import and execute the component
-        (async () => {
-            try {
-                const module = await import(moduleUrl);
-                const Component = module.default || module.${componentName};
-                
-                if (typeof Component !== 'undefined') {
-                    const component = Component();
-                    if (component) {
-                        document.getElementById('root').appendChild(component);
-                    } else {
-                        console.error('Component returned null or undefined');
-                    }
-                } else {
-                    console.error('Component is not defined');
-                }
-            } catch (error) {
-                console.error('Error rendering component:', error.message || error);
-                document.getElementById('root').innerHTML = 
-                    '<div style="color: red; padding: 20px; border: 2px solid red; border-radius: 4px;">' +
-                    '<h3>Render Error</h3>' +
-                    '<pre>' + (error.stack || error.toString()) + '</pre>' +
-                    '</div>';
-            } finally {
-                // Clean up the blob URL
-                URL.revokeObjectURL(moduleUrl);
-            }
-        })();
-    </script>
-</body>
-</html>`;
-};
+    // Remove the wrapping (function(){ ... })();
+    cleanCode = cleanCode.replace(/^\s*\(\s*function\s*\(\)\s*{\s*/m, '');
+    cleanCode = cleanCode.replace(/\s*}\s*\)\s*\(\s*\)\s*;\s*$/m, '');
+    
+    // Extract all function declarations
+    const exportedFunctions = [];
+    
+    // Match function declarations (like "function sanganisa")
+    const funcMatches = cleanCode.matchAll(/function\s+(\w+)\s*\([^)]*\)/gm);
+    for (const match of funcMatches) {
+      exportedFunctions.push(match[1]);
+    }
+    
+    // Build the export statement
+    if (exportedFunctions.length > 0) {
+      // Export each function as a named export
+      const exports = exportedFunctions.map(fn => `export { ${fn} };`).join('\n');
+      
+      // Also create a default export with all functions
+      const defaultExport = `\nexport default { ${exportedFunctions.join(', ')} };`;
+      
+      return `${cleanCode}\n${exports}\n${defaultExport}`;
+    }
+    
+    return cleanCode;
+  };
 
   // Update code when file changes
   useEffect(() => {
-    if (currentFile) {
+    if (currentFile && filesInitialized) {
       compileCode(code, currentFile.name);
       
       // Mark file as modified if content changed
@@ -1090,32 +1041,7 @@ const wrapShonaModule = (jsCode) => {
         ));
       }
     }
-  }, [code, currentFile]);
-
-  // Load files from localStorage on mount
-  useEffect(() => {
-    const savedFiles = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key.startsWith('shonax_file_')) {
-        const path = key.replace('shonax_file_', '');
-        const content = localStorage.getItem(key);
-        if (content && !files.find(f => f.path === path)) {
-          savedFiles.push({
-            type: 'file',
-            name: path.split('/').pop(),
-            path,
-            content,
-            modified: false
-          });
-        }
-      }
-    }
-    
-    if (savedFiles.length > 0) {
-      setFiles(prevFiles => [...prevFiles, ...savedFiles]);
-    }
-  }, []);
+  }, [code, currentFile, filesInitialized]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1492,7 +1418,6 @@ const wrapShonaModule = (jsCode) => {
                       theme="vs-dark"
                       value={compiledCode}
                       options={{
-                        // readOnly: true,
                         minimap: { enabled: false },
                         fontSize: 14,
                         fontFamily: "'Jetbrains Mono', 'Fira Code', monospace",
