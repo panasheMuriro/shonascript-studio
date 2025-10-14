@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 
 import antlr4 from 'antlr4';
 import ShonascriptxVisitor from './build/ShonascriptxVisitor.js';
@@ -290,11 +291,7 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
 
                 emittedLines.push(styleCode);
 
-                // Now process the rest of the content after removing the style tag
-                const remainingText = fullText.replace(/<style>[\s\S]*?<\/style>/, '').trim();
-
-                // Parse the remaining content by skipping past the style-related parse errors
-                let skipUntilValidElement = false;
+          
 
                 for (const child of ctx.children ?? []) {
                     const childText = child.getText ? child.getText() : '';

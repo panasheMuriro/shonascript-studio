@@ -297,20 +297,30 @@ main()`,
     handleFileSelect(newFile);
   };
 
-  const handleFileDelete = (path) => {
-    setFiles(files.filter(f => f.path !== path));
-    setOpenTabs(openTabs.filter(t => t.path !== path));
-    
-    if (currentFile?.path === path) {
-      const remainingFile = files.find(f => f.path !== path);
-      if (remainingFile) {
-        handleFileSelect(remainingFile);
-      } else {
-        setCurrentFile(null);
-        setCode('');
-      }
+
+const handleFileDelete = (path) => {
+  // Remove from localStorage
+  const storageKey = `shonax_file_${path}`;
+  localStorage.removeItem(storageKey);
+  
+  // Remove from state
+  setFiles(files.filter(f => f.path !== path));
+  setOpenTabs(openTabs.filter(t => t.path !== path));
+  
+  // If the deleted file was the current file, switch to another
+  if (currentFile?.path === path) {
+    const remainingFile = files.find(f => f.path !== path);
+    if (remainingFile) {
+      handleFileSelect(remainingFile);
+    } else {
+      setCurrentFile(null);
+      setCode('');
     }
-  };
+  }
+  
+  // Optional: Log deletion for debugging
+  console.log(`Deleted file: ${path} from localStorage`);
+};
 
   const handleFileRename = (oldPath, newName) => {
     const updatedFiles = files.map(f => {
