@@ -36,6 +36,12 @@ export default class ShonascriptxVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by ShonascriptxParser#homweDeclaration.
+	visitHomweDeclaration(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by ShonascriptxParser#reactiveOneLiner.
 	visitReactiveOneLiner(ctx) {
 	  return this.visitChildren(ctx);

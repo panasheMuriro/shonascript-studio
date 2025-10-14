@@ -50,6 +50,15 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 	}
 
 
+	// Enter a parse tree produced by ShonascriptxParser#homweDeclaration.
+	enterHomweDeclaration(ctx) {
+	}
+
+	// Exit a parse tree produced by ShonascriptxParser#homweDeclaration.
+	exitHomweDeclaration(ctx) {
+	}
+
+
 	// Enter a parse tree produced by ShonascriptxParser#reactiveOneLiner.
 	enterReactiveOneLiner(ctx) {
 	}

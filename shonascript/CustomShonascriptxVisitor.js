@@ -1623,55 +1623,58 @@ ${setupCode}
     }
 
 
-    visitHtmlContentElement(ctx) {
-        // Check what type of content element this is
-        if (ctx.shonaControlFlow && ctx.shonaControlFlow()) {
-            return this.visit(ctx.shonaControlFlow());
-        }
-        if (ctx.shonaExpression && ctx.shonaExpression()) {
-            const expr = this.visit(ctx.shonaExpression().expression());
-            const parent = this.parentStack.at(-1);
-            return `${parent}.appendChild($$createText(${expr}));`;
-        }
-        if (ctx.htmlElement && ctx.htmlElement()) {
-            return this.visit(ctx.htmlElement());
-        }
-        if (ctx.WS_IN_HTML && ctx.WS_IN_HTML()) {
-            const parent = this.parentStack.at(-1);
-            return `${parent}.appendChild($$createText(' '));`;
-        }
-        if (ctx.htmlText && ctx.htmlText()) {
-            // Try to get the original text with spaces preserved
-            const start = ctx.htmlText().start.start;
-            const stop = ctx.htmlText().stop.stop;
-            const inputStream = ctx.htmlText().start.getInputStream();
-            let raw = inputStream.getText(start, stop);
-
-            // Check if the next token after this text is a shonaExpression
-            // by looking at the parent context
-            const parent = ctx.parentNode;
-            if (parent && parent.children) {
-                const myIndex = parent.children.indexOf(ctx);
-                if (myIndex >= 0 && myIndex + 1 < parent.children.length) {
-                    const nextChild = parent.children[myIndex + 1];
-                    if (nextChild.shonaExpression && nextChild.shonaExpression()) {
-                        // There's an expression following this text, ensure we have a space
-                        if (!raw.endsWith(' ')) {
-                            raw += ' ';
-                        }
-                    }
-                }
-            }
-
-            const parentEl = this.parentStack.at(-1);
-            const tagName = this.tagStack.at(-1);
-            const insideStyle = tagName === 'style';
-
-            return this._emitInterpolatedText(raw, parentEl, insideStyle);
-        }
-        // Handle standalone whitespace tokens
-        return '';
+visitHtmlContentElement(ctx) {
+    // 1. Control flow ONLY from inside {}
+    if (ctx.shonaControlFlow && ctx.shonaControlFlow()) {
+        return this.visit(ctx.shonaControlFlow());
     }
+    
+    // 2. Expression inside {}
+    if (ctx.shonaExpression && ctx.shonaExpression()) {
+        const expr = this.visit(ctx.shonaExpression().expression());
+        const parent = this.parentStack.at(-1);
+        return `${parent}.appendChild($$createText(${expr}));`;
+    }
+    
+    // 3. Nested HTML element
+    if (ctx.htmlElement && ctx.htmlElement()) {
+        return this.visit(ctx.htmlElement());
+    }
+    
+    // 4. Whitespace
+    if (ctx.WS_IN_HTML && ctx.WS_IN_HTML()) {
+        const parent = this.parentStack.at(-1);
+        return `${parent}.appendChild($$createText(' '));`;
+    }
+    
+    // 5. HTML text - get the complete text with spaces
+    if (ctx.htmlText && ctx.htmlText()) {
+        // Use the visitor to get the properly reconstructed text
+        const text = this.visit(ctx.htmlText());
+        
+        if (text) {
+            const parent = this.parentStack.at(-1);
+            const escaped = text
+                .replace(/\\/g, '\\\\')
+                .replace(/`/g, '\\`')
+                .replace(/\$/g, '\\$');
+            
+            return `${parent}.appendChild($$createText(\`${escaped}\`));`;
+        }
+    }
+    
+    return '';
+}
+
+visitHtmlText(ctx) {
+    // Get the full text span including spaces
+    const start = ctx.start.start;
+    const stop = ctx.stop.stop;
+    const inputStream = ctx.start.getInputStream();
+    const fullText = inputStream.getText(start, stop);
+    
+    return fullText;
+}
 
     visitShonaControlFlow(ctx) {
         // The control flow statement is inside the braces
