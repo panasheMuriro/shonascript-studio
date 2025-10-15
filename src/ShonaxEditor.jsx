@@ -75,31 +75,22 @@ const ShonaxEditor = () => {
       type: 'file',
       name: 'main.shonax',
       path: 'main.shonax',
-      content: `// Shonax Component Example
+      content: `// Shonax Counter Example
 count = 0
 
-basa increment():
+basa wedzera():
     count++
-    nyora "Count is now:", count
 
-<div class="container">
-    <h1>Shonax Counter Demo</h1>
-    <p>Current count: {count}</p>
-    <button class="bg-green" rikabayiwa={increment}>
-        Increment Counter
+<div>
+    <h1 class="text-xl font-bold">ShonascriptX Counter</h1>
+    <p class="my-3">Count yave: {count}</p>
+    <button class="bg-green-500 text-white p-2" rikabayiwa={wedzera}>
+        Wedzera
     </button>
-    
-    {kana count > 5:
-        <p class="warning">Count is getting high!</p>
-    zvimwe:
-        <p class="info">Keep clicking!</p>
-    }
-    
-    <ul>
-        {pane ix mu [1, 2, 3]:
-            <li>Item {ix}</li>
-        }
-    </ul>
+      <button class="bg-red-600 text-white p-2 ml-4" rikabayiwa={basa(): count -=1}>
+    Bvisa
+    </button>
+
 </div>`,
       modified: false
     },
@@ -107,12 +98,12 @@ basa increment():
       type: 'file',
       name: 'example.shona',
       path: 'example.shona',
-      content: `// Regular Shona Script (non-component)
+      content: `// Regular Shonascript (non-component)
 basa main():
-    nyora "Hello from Shona!"
+    nyora "Hello from Shonascript!"
     
     pane i mu [1, 2, 3, 4, 5]:
-        nyora "Number:", i
+        nyora "Nhamba i ", i
 
 main()`,
       modified: false
@@ -757,28 +748,10 @@ main()`,
             background: #f5f5f5;
             color: #333;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+      
         .warning { color: #ff9800; }
         .info { color: #2196f3; }
-        button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background: #45a049;
-        }
+
     </style>
 </head>
 <body>
