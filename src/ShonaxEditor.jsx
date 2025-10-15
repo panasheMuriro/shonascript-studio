@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import FileManager from './FileManager';
 import { ShonaxLanguageDefinition, ShonaxTheme, ShonaxLanguageConfiguration } from './monaco-shonax-language';
-import { compileComponent, translateShonax } from '../shonascript/translator-core-shonax';
+import { compileComponent } from '../shonascript/translator-core-shonax';
 import { translateShona } from '../shonascript/translator-core';
 
 // Custom debounce function
@@ -55,7 +55,7 @@ const ShonaxEditor = () => {
   const [compiledCode, setCompiledCode] = useState('');
   const [previewHtml, setPreviewHtml] = useState('');
   const [errors, setErrors] = useState([]);
-  const [warnings, setWarnings] = useState([]);
+  const [, setWarnings] = useState([]);
   const [isCompiling, setIsCompiling] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -649,36 +649,8 @@ main()`,
 </html>`;
   };
 
-  const createVirtualFileSystem = (files, currentFile) => {
-    const fileMap = {};
-    
-    files.forEach(file => {
-      // Convert file path to a module path
-      const modulePath = file.path.replace(/\.(shonax|shona)$/, '.js');
-      
-      // Compile the file content if it's a component
-      if (file.path.endsWith('.shonax')) {
-        try {
-          const compiledCode = compileComponent(file.content, 
-            file.name.replace(/\.(shonax|shona)$/, ''), 
-            {
-              target: 'component',
-              generateSourceMap: false
-            }
-          );
-          fileMap[modulePath] = compiledCode;
-          fileMap[`./${modulePath}`] = compiledCode;
-          fileMap[`/${modulePath}`] = compiledCode;
-        } catch (error) {
-          console.error(`Error compiling ${file.path}:`, error);
-        }
-      }
-    });
-    
-    return fileMap;
-  };
 
-  const createPreviewHtmlWithImports = (jsCode, files, currentFile) => {
+  const createPreviewHtmlWithImports = (jsCode, files) => {
     // Create virtual file system with all compiled components AND regular shona files
     const virtualFS = {};
     
@@ -731,7 +703,6 @@ main()`,
       }
     });
 
-    const componentName = currentFile?.name.replace(/\.(shonax|shona)$/, '') || 'ShonaxComponent';
     
     return `<!DOCTYPE html>
 <html lang="en">

@@ -1544,7 +1544,8 @@ ${setupCode}
                         const nextText = inputStream.getText(start, stop);
 
                         // Don't add space if text starts with space or punctuation
-                        const punctuation = /^[\s,;:.!?)/```\}]/;
+                       const punctuation = /^[\s,;:.!?)`}\]]/;
+
                         if (nextText && !nextText.match(punctuation)) {
                             const parent = this.parentStack.at(-1);
                             results.push(`${parent}.appendChild($$createText(' '));`);
@@ -1737,17 +1738,6 @@ visitHtmlText(ctx) {
 
         return code;
     }
-
-    visitHtmlExpr(ctx) {
-        // Only allow in component mode
-        if (this.target !== 'component') {
-            throw new Error('HTML elements as expressions are only allowed in component files (.shonax)');
-        }
-
-        // Visit the HTML element - it will return an IIFE that creates the element
-        return this.visit(ctx.htmlElement());
-    }
-
 
 
     visitHtmlContentUntilKeyword(ctx) {
