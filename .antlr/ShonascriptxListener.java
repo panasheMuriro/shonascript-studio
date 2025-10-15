@@ -713,6 +713,16 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 */
 	void exitInputStatement(ShonascriptxParser.InputStatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link ShonascriptxParser#fetchStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterFetchStatement(ShonascriptxParser.FetchStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ShonascriptxParser#fetchStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitFetchStatement(ShonascriptxParser.FetchStatementContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ShonascriptxParser#importStatement}.
 	 * @param ctx the parse tree
 	 */
@@ -723,15 +733,25 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 */
 	void exitImportStatement(ShonascriptxParser.ImportStatementContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ShonascriptxParser#fetchStatement}.
+	 * Enter a parse tree produced by {@link ShonascriptxParser#idList}.
 	 * @param ctx the parse tree
 	 */
-	void enterFetchStatement(ShonascriptxParser.FetchStatementContext ctx);
+	void enterIdList(ShonascriptxParser.IdListContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ShonascriptxParser#fetchStatement}.
+	 * Exit a parse tree produced by {@link ShonascriptxParser#idList}.
 	 * @param ctx the parse tree
 	 */
-	void exitFetchStatement(ShonascriptxParser.FetchStatementContext ctx);
+	void exitIdList(ShonascriptxParser.IdListContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ShonascriptxParser#modulePath}.
+	 * @param ctx the parse tree
+	 */
+	void enterModulePath(ShonascriptxParser.ModulePathContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ShonascriptxParser#modulePath}.
+	 * @param ctx the parse tree
+	 */
+	void exitModulePath(ShonascriptxParser.ModulePathContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ShonascriptxParser#propName}.
 	 * @param ctx the parse tree
@@ -1302,6 +1322,18 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitExprToSetExpr(ShonascriptxParser.ExprToSetExprContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code zvanyorwaVar}
+	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterZvanyorwaVar(ShonascriptxParser.ZvanyorwaVarContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code zvanyorwaVar}
+	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitZvanyorwaVar(ShonascriptxParser.ZvanyorwaVarContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code naturalEqualityOp}
 	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.

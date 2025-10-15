@@ -796,6 +796,18 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterFetchStatement(ShonascriptxParser.FetchStatementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitFetchStatement(ShonascriptxParser.FetchStatementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterImportStatement(ShonascriptxParser.ImportStatementContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -808,13 +820,25 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterFetchStatement(ShonascriptxParser.FetchStatementContext ctx) { }
+	@Override public void enterIdList(ShonascriptxParser.IdListContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitFetchStatement(ShonascriptxParser.FetchStatementContext ctx) { }
+	@Override public void exitIdList(ShonascriptxParser.IdListContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterModulePath(ShonascriptxParser.ModulePathContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitModulePath(ShonascriptxParser.ModulePathContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -1451,6 +1475,18 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitExprToSetExpr(ShonascriptxParser.ExprToSetExprContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterZvanyorwaVar(ShonascriptxParser.ZvanyorwaVarContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitZvanyorwaVar(ShonascriptxParser.ZvanyorwaVarContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
