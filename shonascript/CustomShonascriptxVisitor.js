@@ -254,150 +254,454 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
     ============================================= */
 
     // Replace the visitProgram method with this updated version:
-    visitProgram(ctx) {
-        const input = ctx.start.getInputStream();
-        const fullText = input.getText(0, input.size - 1);
+//     visitProgram(ctx) {
+//         const input = ctx.start.getInputStream();
+//         const fullText = input.getText(0, input.size - 1);
 
-        if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
-            throw new Error('style elements cannot be assigned to variables');
-        }
+//         if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
+//             throw new Error('style elements cannot be assigned to variables');
+//         }
 
-        this.computedCode = [];
+//         this.computedCode = [];
 
-        const isComponent = this.target === 'component';
-        if (isComponent) {
-            this.parentStack = ['root'];
-            this.elementCounter = 0;
-        }
-        if (this.target === 'node' && this.containsFetch(ctx))
-            this.inAsyncWrapper = true;
+//         const isComponent = this.target === 'component';
+//         if (isComponent) {
+//             this.parentStack = ['root'];
+//             this.elementCounter = 0;
+//         }
+//         if (this.target === 'node' && this.containsFetch(ctx))
+//             this.inAsyncWrapper = true;
 
-        const emittedLines = [];
-        const componentVars = [];
-        const componentFns = [];
-        let rootElement = null;
+//         const emittedLines = [];
+//         const componentVars = [];
+//         const componentFns = [];
+//         let rootElement = null;
 
-        // Special handling for style tags at the top level
-        if (isComponent && fullText.includes('<style>')) {
-            // Extract style content manually from the full text
-            const styleMatch = fullText.match(/<style>([\s\S]*?)<\/style>/);
-            if (styleMatch) {
-                const styleContent = styleMatch[1].trim();
-                const styleElName = `el${this.elementCounter++}`;
+//         // Special handling for style tags at the top level
+//         if (isComponent && fullText.includes('<style>')) {
+//             // Extract style content manually from the full text
+//             const styleMatch = fullText.match(/<style>([\s\S]*?)<\/style>/);
+//             if (styleMatch) {
+//                 const styleContent = styleMatch[1].trim();
+//                 const styleElName = `el${this.elementCounter++}`;
 
-                const styleCode = `const ${styleElName} = document.createElement('style');\n` +
-                    `${styleElName}.textContent = \`${styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;\n` +
-                    `document.head.appendChild(${styleElName});\n`;
+//                 const styleCode = `const ${styleElName} = document.createElement('style');\n` +
+//                     `${styleElName}.textContent = \`${styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;\n` +
+//                     `document.head.appendChild(${styleElName});\n`;
 
-                emittedLines.push(styleCode);
+//                 emittedLines.push(styleCode);
 
           
 
-                for (const child of ctx.children ?? []) {
-                    const childText = child.getText ? child.getText() : '';
+//                 for (const child of ctx.children ?? []) {
+//                     const childText = child.getText ? child.getText() : '';
 
-                    // Skip the broken style-related parse nodes
-                    if (childText.includes('style>') || childText.includes('.redText') ||
-                        childText.includes('color:') || childText.includes('red;}') ||
-                        childText === '{' || childText === '}' || childText === '<' ||
-                        childText === '</' || childText === ':' ||
-                        childText.includes('<missing')) {
-                        continue;
-                    }
+//                     // Skip the broken style-related parse nodes
+//                     if (childText.includes('style>') || childText.includes('.redText') ||
+//                         childText.includes('color:') || childText.includes('red;}') ||
+//                         childText === '{' || childText === '}' || childText === '<' ||
+//                         childText === '</' || childText === ':' ||
+//                         childText.includes('<missing')) {
+//                         continue;
+//                     }
 
-                    // Look for the actual HTML content
-                    if (childText.includes('<div>') ||
-                        (child.constructor.name === 'ProgramElementContext' &&
-                            child.htmlElement && child.htmlElement())) {
+//                     // Look for the actual HTML content
+//                     if (childText.includes('<div>') ||
+//                         (child.constructor.name === 'ProgramElementContext' &&
+//                             child.htmlElement && child.htmlElement())) {
 
-                        // Found valid HTML element
-                        const currentElName = `el${this.elementCounter}`;
-                        const code = this.visit(child);
-                        if (code) {
-                            emittedLines.push(code);
-                            if (!rootElement) {
-                                rootElement = currentElName;
-                            }
-                        }
-                        continue;
-                    }
+//                         // Found valid HTML element
+//                         const currentElName = `el${this.elementCounter}`;
+//                         const code = this.visit(child);
+//                         if (code) {
+//                             emittedLines.push(code);
+//                             if (!rootElement) {
+//                                 rootElement = currentElName;
+//                             }
+//                         }
+//                         continue;
+//                     }
 
-                    // Process other valid children
-                    if (child.symbol?.type === antlr4.Token.EOF ||
-                        child.constructor.name === 'ErrorNodeImpl') continue;
+//                     // Process other valid children
+//                     if (child.symbol?.type === antlr4.Token.EOF ||
+//                         child.constructor.name === 'ErrorNodeImpl') continue;
 
-                    if (child.constructor.name === 'ProgramElementContext') {
-                        if (child.line && child.line()) {
-                            const stmt = child.line().statement?.();
-                            if (!stmt) continue;
+//                     if (child.constructor.name === 'ProgramElementContext') {
+//                         if (child.line && child.line()) {
+//                             const stmt = child.line().statement?.();
+//                             if (!stmt) continue;
 
-                            if (stmt.simpleStatement?.()?.assignment?.()) {
-                                const code = this.visit(stmt);
-                                if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                                continue;
-                            }
+//                             if (stmt.simpleStatement?.()?.assignment?.()) {
+//                                 const code = this.visit(stmt);
+//                                 if (code.trim()) componentVars.push(code.replace(/;$/, ''));
+//                                 continue;
+//                             }
 
-                            if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-                                const code = this.visit(stmt.compoundStatement().functionDefinition());
-                                if (code.trim()) componentFns.push(code);
-                                continue;
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            // Normal processing for non-style content
+//                             if (stmt.compoundStatement?.()?.functionDefinition?.()) {
+//                                 const code = this.visit(stmt.compoundStatement().functionDefinition());
+//                                 if (code.trim()) componentFns.push(code);
+//                                 continue;
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         } else {
+//             // Normal processing for non-style content
+//             for (const child of ctx.children ?? []) {
+
+
+
+//                 if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
+
+//                 if (isComponent && child.constructor.name === 'ProgramElementContext') {
+
+
+//                     if (child.reactiveBlock && child.reactiveBlock()) {
+
+//                         this.visit(child.reactiveBlock());
+//                         continue;
+//                     }
+
+//                     if (child.htmlElement && child.htmlElement()) {
+
+//                         const currentElName = `el${this.elementCounter}`;
+//                         const htmlElCtx = child.htmlElement();
+
+
+
+//                         if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
+
+//                             continue;
+//                         }
+//                         const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
+
+
+//                         const code = this.visit(child.htmlElement());
+//                         if (code) emittedLines.push(code);
+
+//                         if (!rootElement && tagName !== 'style') {
+//                             rootElement = currentElName;
+//                         }
+//                         continue;
+//                     }
+
+//                     if (child.line && child.line()) {
+
+//                         const stmt = child.line().statement?.();
+//                         if (!stmt) continue;
+
+//                         if (stmt.simpleStatement?.()?.assignment?.()) {
+//                             const code = this.visit(stmt);
+//                             if (code.trim()) componentVars.push(code.replace(/;$/, ''));
+//                             continue;
+//                         }
+
+//                         if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
+//                             const code = this.visit(stmt);
+//                             if (code.trim()) componentVars.push(code.replace(/;$/, ''));
+//                             continue;
+//                         }
+
+//                         if (stmt.compoundStatement?.()?.functionDefinition?.()) {
+//                             const code = this.visit(stmt.compoundStatement().functionDefinition());
+//                             if (code.trim()) componentFns.push(code);
+//                             continue;
+//                         }
+//                     }
+//                 }
+
+//                 const code = this.visit(child);
+
+//                 if (code) emittedLines.push(code);
+//             }
+//         }
+
+//         const bodyCode = emittedLines.filter(Boolean).join('\n');
+
+//         /* ========== 3. helper snippets ========== */
+//         const helpers = `
+
+// function $$createText(data){
+
+//     if (data && data.nodeType) return data;
+//     return document.createTextNode(data);
+// }
+// function $$listen(node,e,h){node.addEventListener(e,h);}
+// function $$setAttribute(n,a,v){
+//     if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
+
+//     else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
+//     else{n.setAttribute(a,v);}
+// }const _effects = [];
+// function _runEffects(){ for(const f of _effects) f();}`;
+
+//         /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
+//         if (isComponent) {
+
+// let importStatements = '';
+// if (this.componentImports && this.componentImports.size > 0) {
+//     for (const [path, symbols] of this.componentImports) {
+//         // Normalize the import path
+//         let importPath = path;
+        
+//         // Check if it's an external URL (http://, https://, etc.)
+//         const isExternalURL = path.match(/^https?:\/\//) || path.match(/^[a-z]+:\/\//);
+        
+//         if (isExternalURL) {
+//             // Keep external URLs as-is (no .js extension)
+//             importPath = path;
+//         } else if (!path.includes('/') && !path.includes('.')) {
+//             // Simple module name without path
+//             importPath = `./${path}.js`;
+//         } else if (path.endsWith('.shonax')) {
+//             importPath = path.replace(/\.shonax$/, '.js');
+//         } else if (path.endsWith('.shona')) {
+//             importPath = path.replace(/\.shona$/, '.js');
+//         } else if (!path.endsWith('.js')) {
+//             importPath = `${path}.js`;
+//         }
+        
+//         // Import all symbols from this path
+//         const symbolsList = Array.from(symbols);
+        
+//         // Check if this is likely a utility module (not a component)
+//         const isUtilityModule = !isExternalURL && (
+//             path === 'example' || 
+//             path === 'utils' ||
+//             path.endsWith('.shona') || 
+//             (!path.match(/^[A-Z]/) && !path.includes('Component'))
+//         );
+        
+//         if (isExternalURL) {
+//             // External URLs are usually default exports
+//             // Import each symbol as a default export
+//             symbolsList.forEach(symbol => {
+//                 importStatements += `import ${symbol} from '${importPath}';\n`;
+//             });
+//         } else if (isUtilityModule && symbolsList.length > 1) {
+//             // For utility modules with multiple exports, import as module
+//             importStatements += `import utilModule from '${importPath}';\n`;
+//             symbolsList.forEach(symbol => {
+//                 importStatements += `const ${symbol} = utilModule.${symbol};\n`;
+//             });
+//         } else {
+//             // Components - use default imports
+//             symbolsList.forEach(symbol => {
+//                 importStatements += `import ${symbol} from '${importPath}';\n`;
+//             });
+//         }
+//     }
+//     if (importStatements) {
+//         importStatements += '\n';
+//     }
+// }
+//             const hasIntervals = bodyCode.includes('setInterval(');
+//     const hasTimeouts = bodyCode.includes('setTimeout(');
+    
+//     // Separate setup code (intervals/timeouts) from render code
+//     let setupCode = '';
+//     let renderBodyCode = bodyCode;
+    
+//     if (hasIntervals || hasTimeouts) {
+//         // Extract interval/timeout statements from the body
+//         const lines = bodyCode.split('\n');
+//         const setupLines = [];
+//         const renderLines = [];
+        
+//         for (const line of lines) {
+//             if (line.trim().includes('setInterval(') || line.trim().includes('setTimeout(')) {
+//                 setupLines.push(line);
+//             } else {
+//                 renderLines.push(line);
+//             }
+//         }
+        
+//         setupCode = setupLines.join('\n');
+//         renderBodyCode = renderLines.join('\n');
+//     }
+//             const destructure = this.componentProps.length
+//                 ? `const { ${this.componentProps.join(', ')} } = props;`
+//                 : '';
+//             const varDecls = componentVars.length
+//                 ? componentVars.map(l => '    ' + l + ';').join('\n')
+//                 : '';
+//             const fnDecls = componentFns.length
+//                 ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
+//                 : '';
+
+//             // Check if zvanyorwa is needed
+//             const needsZvanyorwa = bodyCode.includes('zvanyorwa');
+//             const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
+
+
+
+
+//             // Indent the DOM creation logic to fit inside the _render function
+//             // const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
+//     const indentedBody = renderBodyCode.split('\n').map(l => '        ' + l).join('\n');
+
+
+
+//                return `${importStatements}${helpers}
+
+// export default function ${this.componentName}(props = {}) {
+
+//     const root = document.createElement('div');
+
+//     ${destructure}
+// ${varDecls}
+// ${zvanyorwaDecl}
+// ${fnDecls}
+
+//     function _runComputations() {
+// ${this.computedCode.map(line => '        ' + line).join('\n')}
+//     }
+
+//    function _render() {
+//     /* remember focus */
+//     const activeElem = root.contains(document.activeElement)
+//                        ? document.activeElement : null;
+//     const activeKey  = activeElem ? activeElem.getAttribute('data-k') : null;
+//     const caretStart = activeElem?.selectionStart ?? null;
+//     const caretEnd   = activeElem?.selectionEnd   ?? null;
+
+//     _runComputations();
+
+//     root.innerHTML = '';
+// ${indentedBody}
+
+//     /* restore focus */
+//     if (activeKey) {
+//         requestAnimationFrame(() => {
+//             const fresh = root.querySelector('[data-k="'+activeKey+'"]');
+//             if (fresh && fresh !== document.activeElement) {
+//                 fresh.focus({ preventScroll:true });
+//                 if (caretStart!==null && caretEnd!==null && fresh.setSelectionRange)
+//                     fresh.setSelectionRange(caretStart, caretEnd);
+//             }
+//         });
+//     }
+// }
+
+//     const _effects = [_render];
+//     function _runEffects() {
+//         for (const f of _effects) f();
+//     }
+
+//     _render(); // Initial render call.
+    
+//     // Set up intervals and timeouts after initial render
+// ${setupCode}
+
+//     return root;
+// }`;
+// }
+
+//         /* ========== 5. REGULAR (SCRIPT) OUTPUT (UNCHANGED) ========== */
+//         let header = '';
+//         if (this.target === 'node') {
+//             for (const [mod, symbols] of this.imports)
+//                 header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
+//             if (this.imports.size) header += '\n';
+//             if (this.promptInjected) header +=
+//                 'import promptSync from "prompt-sync";\n' +
+//                 'const prompt = promptSync({ sigint: true });\n\n';
+//         }
+
+//         const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
+//         if (this.inAsyncWrapper && globals.length)
+//             header += `let ${globals.join(', ')};\n\n`;
+
+//         if (this.inAsyncWrapper) {
+//             const wrapper = `(async () => {\n${bodyCode}\n})();\n`;
+//             const exports = globals.length && this.target === 'node'
+//                 ? `export { ${globals.join(', ')} };\n` : '';
+//             return header + helpers + '\n\n' + wrapper + exports;
+//         }
+
+//         if (globals.length && this.target === 'node')
+//             header += `export { ${globals.join(', ')} };\n\n`;
+
+//         return header + helpers + '\n\n(function(){\n' + bodyCode + '\n})();';
+//     }
+visitProgram(ctx) {
+    const input = ctx.start.getInputStream();
+    const fullText = input.getText(0, input.size - 1);
+
+    if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
+        throw new Error('style elements cannot be assigned to variables');
+    }
+
+    this.computedCode = [];
+
+    const isComponent = this.target === 'component';
+    if (isComponent) {
+        this.parentStack = ['root'];
+        this.elementCounter = 0;
+    }
+    
+    if (this.target === 'node' && this.containsFetch(ctx))
+        this.inAsyncWrapper = true;
+
+    const emittedLines = [];
+    const componentVars = [];
+    const componentFns = [];
+    let rootElement = null;
+
+    // Special handling for style tags at the top level in components
+    if (isComponent && fullText.includes('<style>')) {
+        // Extract style content manually from the full text
+        const styleMatch = fullText.match(/<style>([\s\S]*?)<\/style>/);
+        if (styleMatch) {
+            const styleContent = styleMatch[1].trim();
+            const styleElName = `el${this.elementCounter++}`;
+
+            const styleCode = `const ${styleElName} = document.createElement('style');\n` +
+                `${styleElName}.textContent = \`${styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;\n` +
+                `document.head.appendChild(${styleElName});\n`;
+
+            emittedLines.push(styleCode);
+
+            // Process remaining children, skipping broken style nodes
             for (const child of ctx.children ?? []) {
+                const childText = child.getText ? child.getText() : '';
 
+                // Skip the broken style-related parse nodes
+                if (childText.includes('style>') || childText.includes('.redText') ||
+                    childText.includes('color:') || childText.includes('red;}') ||
+                    childText === '{' || childText === '}' || childText === '<' ||
+                    childText === '</' || childText === ':' ||
+                    childText.includes('<missing')) {
+                    continue;
+                }
 
+                // Look for the actual HTML content
+                if (childText.includes('<div>') ||
+                    (child.constructor.name === 'ProgramElementContext' &&
+                        child.htmlElement && child.htmlElement())) {
 
-                if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
-
-                if (isComponent && child.constructor.name === 'ProgramElementContext') {
-
-
-                    if (child.reactiveBlock && child.reactiveBlock()) {
-
-                        this.visit(child.reactiveBlock());
-                        continue;
-                    }
-
-                    if (child.htmlElement && child.htmlElement()) {
-
-                        const currentElName = `el${this.elementCounter}`;
-                        const htmlElCtx = child.htmlElement();
-
-
-
-                        if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
-
-                            continue;
-                        }
-                        const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
-
-
-                        const code = this.visit(child.htmlElement());
-                        if (code) emittedLines.push(code);
-
-                        if (!rootElement && tagName !== 'style') {
+                    const currentElName = `el${this.elementCounter}`;
+                    const code = this.visit(child);
+                    if (code) {
+                        emittedLines.push(code);
+                        if (!rootElement) {
                             rootElement = currentElName;
                         }
-                        continue;
                     }
+                    continue;
+                }
 
+                // Process other valid children
+                if (child.symbol?.type === antlr4.Token.EOF ||
+                    child.constructor.name === 'ErrorNodeImpl') continue;
+
+                if (child.constructor.name === 'ProgramElementContext') {
                     if (child.line && child.line()) {
-
                         const stmt = child.line().statement?.();
                         if (!stmt) continue;
 
                         if (stmt.simpleStatement?.()?.assignment?.()) {
-                            const code = this.visit(stmt);
-                            if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                            continue;
-                        }
-
-                        if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
                             const code = this.visit(stmt);
                             if (code.trim()) componentVars.push(code.replace(/;$/, ''));
                             continue;
@@ -410,143 +714,195 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
                         }
                     }
                 }
-
-                const code = this.visit(child);
-
-                if (code) emittedLines.push(code);
             }
         }
+    } else {
+        // Normal processing for non-style content
+        for (const child of ctx.children ?? []) {
+            if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
 
-        const bodyCode = emittedLines.filter(Boolean).join('\n');
+            if (isComponent && child.constructor.name === 'ProgramElementContext') {
+                if (child.reactiveBlock && child.reactiveBlock()) {
+                    this.visit(child.reactiveBlock());
+                    continue;
+                }
 
-        /* ========== 3. helper snippets ========== */
-        const helpers = `
+                if (child.htmlElement && child.htmlElement()) {
+                    const currentElName = `el${this.elementCounter}`;
+                    const htmlElCtx = child.htmlElement();
 
+                    if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
+                        continue;
+                    }
+                    const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
+
+                    const code = this.visit(child.htmlElement());
+                    if (code) emittedLines.push(code);
+
+                    if (!rootElement && tagName !== 'style') {
+                        rootElement = currentElName;
+                    }
+                    continue;
+                }
+
+                if (child.line && child.line()) {
+                    const stmt = child.line().statement?.();
+                    if (!stmt) continue;
+
+                    if (stmt.simpleStatement?.()?.assignment?.()) {
+                        const code = this.visit(stmt);
+                        if (code.trim()) componentVars.push(code.replace(/;$/, ''));
+                        continue;
+                    }
+
+                    if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
+                        const code = this.visit(stmt);
+                        if (code.trim()) componentVars.push(code.replace(/;$/, ''));
+                        continue;
+                    }
+
+                    if (stmt.compoundStatement?.()?.functionDefinition?.()) {
+                        const code = this.visit(stmt.compoundStatement().functionDefinition());
+                        if (code.trim()) componentFns.push(code);
+                        continue;
+                    }
+                }
+            }
+
+            const code = this.visit(child);
+            if (code) emittedLines.push(code);
+        }
+    }
+
+    const bodyCode = emittedLines.filter(Boolean).join('\n');
+
+    /* ========== HELPER FUNCTIONS - ONLY FOR COMPONENTS ========== */
+    const helpers = isComponent ? `
 function $$createText(data){
-
     if (data && data.nodeType) return data;
     return document.createTextNode(data);
 }
 function $$listen(node,e,h){node.addEventListener(e,h);}
 function $$setAttribute(n,a,v){
     if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
-
     else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
     else{n.setAttribute(a,v);}
-}const _effects = [];
-function _runEffects(){ for(const f of _effects) f();}`;
-
-        /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
-        if (isComponent) {
-
-let importStatements = '';
-if (this.componentImports && this.componentImports.size > 0) {
-    for (const [path, symbols] of this.componentImports) {
-        // Normalize the import path
-        let importPath = path;
-        
-        // Check if it's an external URL (http://, https://, etc.)
-        const isExternalURL = path.match(/^https?:\/\//) || path.match(/^[a-z]+:\/\//);
-        
-        if (isExternalURL) {
-            // Keep external URLs as-is (no .js extension)
-            importPath = path;
-        } else if (!path.includes('/') && !path.includes('.')) {
-            // Simple module name without path
-            importPath = `./${path}.js`;
-        } else if (path.endsWith('.shonax')) {
-            importPath = path.replace(/\.shonax$/, '.js');
-        } else if (path.endsWith('.shona')) {
-            importPath = path.replace(/\.shona$/, '.js');
-        } else if (!path.endsWith('.js')) {
-            importPath = `${path}.js`;
-        }
-        
-        // Import all symbols from this path
-        const symbolsList = Array.from(symbols);
-        
-        // Check if this is likely a utility module (not a component)
-        const isUtilityModule = !isExternalURL && (
-            path === 'example' || 
-            path === 'utils' ||
-            path.endsWith('.shona') || 
-            (!path.match(/^[A-Z]/) && !path.includes('Component'))
-        );
-        
-        if (isExternalURL) {
-            // External URLs are usually default exports
-            // Import each symbol as a default export
-            symbolsList.forEach(symbol => {
-                importStatements += `import ${symbol} from '${importPath}';\n`;
-            });
-        } else if (isUtilityModule && symbolsList.length > 1) {
-            // For utility modules with multiple exports, import as module
-            importStatements += `import utilModule from '${importPath}';\n`;
-            symbolsList.forEach(symbol => {
-                importStatements += `const ${symbol} = utilModule.${symbol};\n`;
-            });
-        } else {
-            // Components - use default imports
-            symbolsList.forEach(symbol => {
-                importStatements += `import ${symbol} from '${importPath}';\n`;
-            });
-        }
-    }
-    if (importStatements) {
-        importStatements += '\n';
-    }
 }
-            const hasIntervals = bodyCode.includes('setInterval(');
-    const hasTimeouts = bodyCode.includes('setTimeout(');
-    
-    // Separate setup code (intervals/timeouts) from render code
-    let setupCode = '';
-    let renderBodyCode = bodyCode;
-    
-    if (hasIntervals || hasTimeouts) {
-        // Extract interval/timeout statements from the body
-        const lines = bodyCode.split('\n');
-        const setupLines = [];
-        const renderLines = [];
-        
-        for (const line of lines) {
-            if (line.trim().includes('setInterval(') || line.trim().includes('setTimeout(')) {
-                setupLines.push(line);
+const _effects = [];
+function _runEffects(){ for(const f of _effects) f();}` : '';
+
+    /* ========== COMPONENT OUTPUT ========== */
+    if (isComponent) {
+        let importStatements = '';
+    if (this.componentImports && this.componentImports.size > 0) {
+        for (const [path, symbols] of this.componentImports) {
+            let importPath = path;
+            
+            // Check if it's an external URL
+            const isExternalURL = path.match(/^https?:\/\//) || path.match(/^[a-z]+:\/\//);
+            
+            if (isExternalURL) {
+                importPath = path;
+            } else if (!path.includes('/') && !path.includes('.')) {
+                importPath = `./${path}.js`;
+            } else if (path.endsWith('.shonax')) {
+                importPath = path.replace(/\.shonax$/, '.js');
+            } else if (path.endsWith('.shona')) {
+                importPath = path.replace(/\.shona$/, '.js');
+            } else if (!path.endsWith('.js') && !path.match(/^https?:\/\//)) {
+                importPath = `${path}.js`;
+            }
+            
+            const symbolsList = Array.from(symbols);
+            
+            // Check if the source is a .shona file by looking for it in the files
+            // This is a better way to determine if it's a utility module
+            let isUtilityModule = false;
+            if (!isExternalURL) {
+                // Check if there's a corresponding .shona file
+                // The path might be just "parent" but the file is "parent.shona"
+                const possibleShonaFiles = [
+                    `${path}.shona`,
+                    `${path}`,
+                    path.replace('.js', '.shona')
+                ];
+                
+                // You'll need to pass the files to the visitor or check in another way
+                // For now, we'll use heuristics
+                isUtilityModule = (
+                    path === 'example' || 
+                    path === 'utils' ||
+                    path === 'parent' ||  // Add common utility names
+                    path.endsWith('.shona') || 
+                    (!path.match(/^[A-Z]/) && !path.includes('Component') && !path.includes('/'))
+                );
+            }
+            
+            if (isExternalURL) {
+                // External URLs are default exports
+                symbolsList.forEach(symbol => {
+                    importStatements += `import ${symbol} from '${importPath}';\n`;
+                });
+            } else if (isUtilityModule) {
+                // For utility modules (.shona files), import the entire module then destructure
+                const moduleVar = `${path}Module`;
+                importStatements += `import * as ${moduleVar} from '${importPath}';\n`;
+                symbolsList.forEach(symbol => {
+                    importStatements += `const ${symbol} = ${moduleVar}.${symbol};\n`;
+                });
             } else {
-                renderLines.push(line);
+                // Components - use default imports
+                symbolsList.forEach(symbol => {
+                    importStatements += `import ${symbol} from '${importPath}';\n`;
+                });
             }
         }
-        
-        setupCode = setupLines.join('\n');
-        renderBodyCode = renderLines.join('\n');
+        if (importStatements) {
+            importStatements += '\n';
+        }
     }
-            const destructure = this.componentProps.length
-                ? `const { ${this.componentProps.join(', ')} } = props;`
-                : '';
-            const varDecls = componentVars.length
-                ? componentVars.map(l => '    ' + l + ';').join('\n')
-                : '';
-            const fnDecls = componentFns.length
-                ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
-                : '';
 
-            // Check if zvanyorwa is needed
-            const needsZvanyorwa = bodyCode.includes('zvanyorwa');
-            const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
+        const hasIntervals = bodyCode.includes('setInterval(');
+        const hasTimeouts = bodyCode.includes('setTimeout(');
+        
+        let setupCode = '';
+        let renderBodyCode = bodyCode;
+        
+        if (hasIntervals || hasTimeouts) {
+            const lines = bodyCode.split('\n');
+            const setupLines = [];
+            const renderLines = [];
+            
+            for (const line of lines) {
+                if (line.trim().includes('setInterval(') || line.trim().includes('setTimeout(')) {
+                    setupLines.push(line);
+                } else {
+                    renderLines.push(line);
+                }
+            }
+            
+            setupCode = setupLines.join('\n');
+            renderBodyCode = renderLines.join('\n');
+        }
 
+        const destructure = this.componentProps.length
+            ? `const { ${this.componentProps.join(', ')} } = props;`
+            : '';
+        const varDecls = componentVars.length
+            ? componentVars.map(l => '    ' + l + ';').join('\n')
+            : '';
+        const fnDecls = componentFns.length
+            ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
+            : '';
 
+        const needsZvanyorwa = bodyCode.includes('zvanyorwa');
+        const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
 
+        const indentedBody = renderBodyCode.split('\n').map(l => '        ' + l).join('\n');
 
-            // Indent the DOM creation logic to fit inside the _render function
-            // const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
-    const indentedBody = renderBodyCode.split('\n').map(l => '        ' + l).join('\n');
-
-
-
-               return `${importStatements}${helpers}
+        return `${importStatements}${helpers}
 
 export default function ${this.componentName}(props = {}) {
-
     const root = document.createElement('div');
 
     ${destructure}
@@ -558,31 +914,31 @@ ${fnDecls}
 ${this.computedCode.map(line => '        ' + line).join('\n')}
     }
 
-   function _render() {
-    /* remember focus */
-    const activeElem = root.contains(document.activeElement)
-                       ? document.activeElement : null;
-    const activeKey  = activeElem ? activeElem.getAttribute('data-k') : null;
-    const caretStart = activeElem?.selectionStart ?? null;
-    const caretEnd   = activeElem?.selectionEnd   ?? null;
+    function _render() {
+        /* remember focus */
+        const activeElem = root.contains(document.activeElement)
+                           ? document.activeElement : null;
+        const activeKey  = activeElem ? activeElem.getAttribute('data-k') : null;
+        const caretStart = activeElem?.selectionStart ?? null;
+        const caretEnd   = activeElem?.selectionEnd   ?? null;
 
-    _runComputations();
+        _runComputations();
 
-    root.innerHTML = '';
+        root.innerHTML = '';
 ${indentedBody}
 
-    /* restore focus */
-    if (activeKey) {
-        requestAnimationFrame(() => {
-            const fresh = root.querySelector('[data-k="'+activeKey+'"]');
-            if (fresh && fresh !== document.activeElement) {
-                fresh.focus({ preventScroll:true });
-                if (caretStart!==null && caretEnd!==null && fresh.setSelectionRange)
-                    fresh.setSelectionRange(caretStart, caretEnd);
-            }
-        });
+        /* restore focus */
+        if (activeKey) {
+            requestAnimationFrame(() => {
+                const fresh = root.querySelector('[data-k="'+activeKey+'"]');
+                if (fresh && fresh !== document.activeElement) {
+                    fresh.focus({ preventScroll:true });
+                    if (caretStart!==null && caretEnd!==null && fresh.setSelectionRange)
+                        fresh.setSelectionRange(caretStart, caretEnd);
+                }
+            });
+        }
     }
-}
 
     const _effects = [_render];
     function _runEffects() {
@@ -596,36 +952,44 @@ ${setupCode}
 
     return root;
 }`;
-}
+    }
 
-        /* ========== 5. REGULAR (SCRIPT) OUTPUT (UNCHANGED) ========== */
+    /* ========== REGULAR SCRIPT OUTPUT (Browser/Node) ========== */
+    const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
+    
+    if (this.target === 'node') {
+        // Node.js module
         let header = '';
-        if (this.target === 'node') {
-            for (const [mod, symbols] of this.imports)
-                header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
-            if (this.imports.size) header += '\n';
-            if (this.promptInjected) header +=
-                'import promptSync from "prompt-sync";\n' +
-                'const prompt = promptSync({ sigint: true });\n\n';
-        }
-
-        const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
+        for (const [mod, symbols] of this.imports)
+            header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
+        if (this.imports.size) header += '\n';
+        if (this.promptInjected) header +=
+            'import promptSync from "prompt-sync";\n' +
+            'const prompt = promptSync({ sigint: true });\n\n';
+        
         if (this.inAsyncWrapper && globals.length)
             header += `let ${globals.join(', ')};\n\n`;
 
         if (this.inAsyncWrapper) {
             const wrapper = `(async () => {\n${bodyCode}\n})();\n`;
-            const exports = globals.length && this.target === 'node'
-                ? `export { ${globals.join(', ')} };\n` : '';
-            return header + helpers + '\n\n' + wrapper + exports;
+            const exports = globals.length ? `export { ${globals.join(', ')} };\n` : '';
+            return header + wrapper + exports;
         }
 
-        if (globals.length && this.target === 'node')
+        if (globals.length)
             header += `export { ${globals.join(', ')} };\n\n`;
 
-        return header + helpers + '\n\n(function(){\n' + bodyCode + '\n})();';
+        return header + bodyCode;
+    } else {
+        // Browser script - NO helpers, NO IIFE wrapper for regular scripts
+        if (this.inAsyncWrapper) {
+            return `(async () => {\n${bodyCode}\n})();`;
+        }
+        
+        // Just return the plain JavaScript code - no wrapper!
+        return bodyCode;
     }
-
+}
 
     visitPrimitiveFilter(ctx) {
         // Add null check
@@ -2275,18 +2639,51 @@ visitHtmlText(ctx) {
     =            IMPORTS & NETWORKING             =
     ============================================= */
 
-visitImportStatement(ctx) {
-    // ---------- symbols ----------
-    const symbolTokens = ctx.idList().ID();
-    const symbols      = symbolTokens.map(t => t.getText());
+// visitImportStatement(ctx) {
+//     // ---------- symbols ----------
+//     const symbolTokens = ctx.idList().ID();
+//     const symbols      = symbolTokens.map(t => t.getText());
 
-    // ---------- module path ----------
+//     // ---------- module path ----------
+//     let modulePath;
+//     if (ctx.modulePath().ID()) {
+//         modulePath = ctx.modulePath().ID().getText();        // example   | utils/math
+//     } else {
+//         modulePath = ctx.modulePath().STRING().getText()
+//                                .replace(/^["']|["']$/g, ''); // "example" → example
+//     }
+
+//     /* ============ COMPONENT TARGET ============ */
+//     if (this.target === 'component') {
+//         if (!this.componentImports.has(modulePath))
+//             this.componentImports.set(modulePath, new Set());
+//         symbols.forEach(s => this.componentImports.get(modulePath).add(s));
+//         return '';                 // real import emitted later in header
+//     }
+
+//     /* ============ NODE TARGET ============ */
+//     if (this.target === 'node') {
+//         if (!this.imports.has(modulePath))
+//             this.imports.set(modulePath, new Set());
+//         symbols.forEach(s => this.imports.get(modulePath).add(s));
+//         return '';
+//     }
+
+//     /* ============ BROWSER (non-component) ============ */
+//     console.warn(`Warning: 'tora ... kubva mu' ignored in browser target.`);
+//     return `// import of ${symbols.join(', ')} ignored in browser target`;
+// }
+
+visitImportStatement(ctx) {
+    const symbolTokens = ctx.idList().ID();
+    const symbols = symbolTokens.map(t => t.getText());
+
     let modulePath;
     if (ctx.modulePath().ID()) {
-        modulePath = ctx.modulePath().ID().getText();        // example   | utils/math
+        modulePath = ctx.modulePath().ID().getText();
     } else {
         modulePath = ctx.modulePath().STRING().getText()
-                               .replace(/^["']|["']$/g, ''); // "example" → example
+                               .replace(/^["']|["']$/g, '');
     }
 
     /* ============ COMPONENT TARGET ============ */
@@ -2294,7 +2691,7 @@ visitImportStatement(ctx) {
         if (!this.componentImports.has(modulePath))
             this.componentImports.set(modulePath, new Set());
         symbols.forEach(s => this.componentImports.get(modulePath).add(s));
-        return '';                 // real import emitted later in header
+        return '';
     }
 
     /* ============ NODE TARGET ============ */
@@ -2305,9 +2702,15 @@ visitImportStatement(ctx) {
         return '';
     }
 
-    /* ============ BROWSER (non-component) ============ */
-    console.warn(`Warning: 'tora ... kubva mu' ignored in browser target.`);
-    return `// import of ${symbols.join(', ')} ignored in browser target`;
+    /* ============ BROWSER TARGET ============ */
+    // For browser, generate simpler code without arrow functions
+    const importStatements = symbols.map(symbol => {
+        // Generate a simpler check that won't cause syntax errors
+        return `const ${symbol} = (window.loadModule && window.loadModule('${modulePath}')['${symbol}']) || null;\n` +
+               `if (!${symbol}) throw new Error('Function ${symbol} not found in module ${modulePath}');`;
+    }).join('\n');
+    
+    return importStatements;
 }
 
     visitFetchStatement(ctx) {
@@ -2890,27 +3293,6 @@ visitTimeoutExpr(ctx) {
         return ctx.STRING().getText();
     }
 
-    // visitVariable(ctx) {
-    //     const name = ctx.ID().getText();
-
-    //     /* 1️⃣  Inside an object-method?  
-    //        → use   this.<prop>   instead of a global variable        */
-    //     if (
-    //         this.objectPropsStack.length &&              // we are compiling an object
-    //         this.currentFunction !== null &&             // inside *a* function/method
-    //         this.objectPropsStack.at(-1).has(name)       // name is one of that object’s props
-    //     ) {
-    //         return `this.${name}`;
-    //     }
-
-    //     /* 2️⃣  Special helper for submit-handlers */
-    //     if (this.currentEvent?.type === 'submit' && name === 'mavalues') {
-    //         return 'Object.fromEntries(new FormData(event.target).entries())';
-    //     }
-
-    //     /* 3️⃣  Fallback: plain variable */
-    //     return name;
-    // }
     visitVariable(ctx) {
         const name = ctx.ID().getText();
 
