@@ -440,46 +440,62 @@ function _runEffects(){ for(const f of _effects) f();}`;
         if (isComponent) {
 
 let importStatements = '';
-    if (this.componentImports && this.componentImports.size > 0) {
-        for (const [path, symbols] of this.componentImports) {
-            // Normalize the import path
-            let importPath = path;
-            
-            if (!path.includes('/') && !path.includes('.')) {
-                importPath = `./${path}.js`;
-            } else if (path.endsWith('.shonax')) {
-                importPath = path.replace(/\.shonax$/, '.js');
-            } else if (path.endsWith('.shona')) {
-                importPath = path.replace(/\.shona$/, '.js');
-            } else if (!path.endsWith('.js')) {
-                importPath = `${path}.js`;
-            }
-            
-            // Import all symbols from this path
-            const symbolsList = Array.from(symbols);
-            
-            // Check if this is likely a utility module (not a component)
-            const isUtilityModule = path === 'example' || 
-                                   path.endsWith('.shona') || 
-                                   !path.match(/^[A-Z]/) && !path.includes('Component');
-            
-            if (isUtilityModule) {
-                // For utility modules, import default and destructure
-                importStatements += `import utilModule from '${importPath}';\n`;
-                symbolsList.forEach(symbol => {
-                    importStatements += `const ${symbol} = utilModule.${symbol};\n`;
-                });
-            } else {
-                // For components, use regular imports
-                symbolsList.forEach(symbol => {
-                    importStatements += `import ${symbol} from '${importPath}';\n`;
-                });
-            }
+if (this.componentImports && this.componentImports.size > 0) {
+    for (const [path, symbols] of this.componentImports) {
+        // Normalize the import path
+        let importPath = path;
+        
+        // Check if it's an external URL (http://, https://, etc.)
+        const isExternalURL = path.match(/^https?:\/\//) || path.match(/^[a-z]+:\/\//);
+        
+        if (isExternalURL) {
+            // Keep external URLs as-is (no .js extension)
+            importPath = path;
+        } else if (!path.includes('/') && !path.includes('.')) {
+            // Simple module name without path
+            importPath = `./${path}.js`;
+        } else if (path.endsWith('.shonax')) {
+            importPath = path.replace(/\.shonax$/, '.js');
+        } else if (path.endsWith('.shona')) {
+            importPath = path.replace(/\.shona$/, '.js');
+        } else if (!path.endsWith('.js')) {
+            importPath = `${path}.js`;
         }
-        if (importStatements) {
-            importStatements += '\n';
+        
+        // Import all symbols from this path
+        const symbolsList = Array.from(symbols);
+        
+        // Check if this is likely a utility module (not a component)
+        const isUtilityModule = !isExternalURL && (
+            path === 'example' || 
+            path === 'utils' ||
+            path.endsWith('.shona') || 
+            (!path.match(/^[A-Z]/) && !path.includes('Component'))
+        );
+        
+        if (isExternalURL) {
+            // External URLs are usually default exports
+            // Import each symbol as a default export
+            symbolsList.forEach(symbol => {
+                importStatements += `import ${symbol} from '${importPath}';\n`;
+            });
+        } else if (isUtilityModule && symbolsList.length > 1) {
+            // For utility modules with multiple exports, import as module
+            importStatements += `import utilModule from '${importPath}';\n`;
+            symbolsList.forEach(symbol => {
+                importStatements += `const ${symbol} = utilModule.${symbol};\n`;
+            });
+        } else {
+            // Components - use default imports
+            symbolsList.forEach(symbol => {
+                importStatements += `import ${symbol} from '${importPath}';\n`;
+            });
         }
     }
+    if (importStatements) {
+        importStatements += '\n';
+    }
+}
             const hasIntervals = bodyCode.includes('setInterval(');
     const hasTimeouts = bodyCode.includes('setTimeout(');
     
@@ -860,19 +876,36 @@ ${setupCode}
     }
 
 
+    // visitInputStatement(ctx) {
+    //     const name = ctx.ID().getText();
+    //     const q = ctx.STRING().getText();
+    //     const decl = this.isDeclared(name) ? '' : 'let ';
+
+    //     if (!this.isDeclared(name)) this.declare(name);
+
+    //     if (this.target === 'browser') {
+    //         return `${decl}${name} = prompt(${q});`;
+    //     }
+    //     this.promptInjected = true;
+    //     return `${decl}${name} = prompt(${q} + " ");`;
+    // }
+
     visitInputStatement(ctx) {
-        const name = ctx.ID().getText();
-        const q = ctx.STRING().getText();
-        const decl = this.isDeclared(name) ? '' : 'let ';
+    const name = ctx.ID().getText();
+    const q = ctx.STRING().getText();
+    const decl = this.isDeclared(name) ? '' : 'let ';
 
-        if (!this.isDeclared(name)) this.declare(name);
+    if (!this.isDeclared(name)) this.declare(name);
 
-        if (this.target === 'browser') {
-            return `${decl}${name} = prompt(${q});`;
-        }
-        this.promptInjected = true;
-        return `${decl}${name} = prompt(${q} + " ");`;
+    // For browser target, use built-in prompt
+    if (this.target === 'browser' || this.target === 'component') {
+        return `${decl}${name} = prompt(${q});`;
     }
+    
+    // For Node.js, use prompt-sync
+    this.promptInjected = true;
+    return `${decl}${name} = prompt(${q} + " ");`;
+}
 
     visitInputExpr(ctx) {
         const q = ctx.STRING().getText();
@@ -2241,47 +2274,6 @@ visitHtmlText(ctx) {
     /* =============================================
     =            IMPORTS & NETWORKING             =
     ============================================= */
-
-
-// visitImportStatement(ctx) {
-//     const symbol = ctx.ID(0).getText();
-    
-//     // Get the module path - could be ID or STRING
-//     let modulePath;
-//     if (ctx.ID(1)) {
-//         modulePath = ctx.ID(1).getText();
-//     } else if (ctx.STRING && ctx.STRING()) {
-//         // Remove quotes from string
-//         modulePath = ctx.STRING().getText().replace(/^["']|["']$/g, '');
-//     } else {
-//         console.warn(`Invalid import statement: ${ctx.getText()}`);
-//         return '';
-//     }
-    
-//     // In component mode, generate the actual import statement
-//     if (this.target === 'component') {
-//         // Store for later use in the import header
-//         if (!this.componentImports.has(modulePath)) {
-//             this.componentImports.set(modulePath, new Set());
-//         }
-//         this.componentImports.get(modulePath).add(symbol);
-        
-//         // Return empty string - the import will be added to the header
-//         return '';
-//     }
-    
-//     // Handle regular Node.js imports (existing logic)
-//     if (this.target !== 'node') {
-//         console.warn(`Warning: 'tora ... kubva mu' (imports) are ignored in the browser target.`);
-//         return `// Import for '${symbol}' ignored in browser target.`;
-//     }
-    
-//     if (!this.imports.has(modulePath)) {
-//         this.imports.set(modulePath, new Set());
-//     }
-//     this.imports.get(modulePath).add(symbol);
-//     return "";
-// }
 
 visitImportStatement(ctx) {
     // ---------- symbols ----------
