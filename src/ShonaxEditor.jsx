@@ -650,7 +650,7 @@ main()`,
   };
 
 
-  const createPreviewHtmlWithImports = (jsCode, files) => {
+const createPreviewHtmlWithImports = (jsCode, files) => {
     // Create virtual file system with all compiled components AND regular shona files
     const virtualFS = {};
     
@@ -761,8 +761,8 @@ main()`,
             let transformedCode = code;
             const imports = [];
             
-            // Extract all imports first
-            const importRegex = /import\\s+(?:({[^}]*})|([\\w$]+)|\\*\\s+as\\s+([\\w$]+))\\s+from\\s+['"](.*?)['"]/g;
+            // Fixed regex with proper escaping
+            const importRegex = /import\\s+(?:(\\{[^}]*\\})|([\\w$]+)|\\*\\s+as\\s+([\\w$]+))\\s+from\\s+['"](.*?)['"]/g;
             let match;
             
             while ((match = importRegex.exec(code)) !== null) {
@@ -809,8 +809,14 @@ main()`,
                         transformedCode = transformedCode.replace(imp.fullMatch, replacement);
                     }
                 } else {
-                    // Handle local imports
-                    const replacement = \`const \${imp.defaultImport || imp.namespaceImport} = window.__localModules['\${imp.modulePath}'] || window.__localModules['\${imp.modulePath}.js'] || window.__localModules['./\${imp.modulePath}'] || window.__localModules['./\${imp.modulePath}.js'];\`;
+                    // Handle local imports - check if it's a single function or an object
+                    const moduleName = imp.defaultImport || imp.namespaceImport;
+                    const replacement = \`
+const __tempModule_\${moduleName} = window.__localModules['\${imp.modulePath}'] || 
+                    window.__localModules['\${imp.modulePath}.js'] || 
+                    window.__localModules['./\${imp.modulePath}'] || 
+                    window.__localModules['./\${imp.modulePath}.js'];
+const \${moduleName} = __tempModule_\${moduleName} && __tempModule_\${moduleName}.\${moduleName} ? __tempModule_\${moduleName}.\${moduleName} : __tempModule_\${moduleName};\`;
                     transformedCode = transformedCode.replace(imp.fullMatch, replacement);
                 }
             }
@@ -827,6 +833,13 @@ main()`,
                 const funcMatch = transformedCode.match(/function\\s+(\\w+)\\s*\\([^)]*\\)\\s*{/);
                 if (funcMatch) {
                     transformedCode += \`\\n; return \${funcMatch[1]};\`;
+                }
+            } else if (moduleType === 'module') {
+                // For .shona modules, the code should already have a return statement from wrapShonaModule
+                // Just make sure it's wrapped properly
+                if (!transformedCode.includes('return {')) {
+                    // If no return statement, assume we need to return an empty object
+                    transformedCode += '\\nreturn {};';
                 }
             }
             
@@ -850,10 +863,18 @@ main()`,
                         const transformedCode = await transformModuleCode(moduleInfo.code, p, moduleInfo.type);
                         
                         try {
+                            // Create a function that returns the module
+                            // Use Function constructor with 'return' to execute and get the module
                             const moduleFunc = new Function(transformedCode);
-                            moduleCache[p] = moduleFunc();
+                            const result = moduleFunc();
+                            
+                            // Log for debugging
+                            console.log(\`Loaded module \${p}:\`, result);
+                            
+                            moduleCache[p] = result;
                         } catch (error) {
                             console.error('Error loading module', p, error);
+                            console.error('Transformed code:', transformedCode);
                             moduleCache[p] = null;
                         }
                     }
@@ -957,40 +978,64 @@ main()`,
 </body>
 </html>`;
   };
+const wrapShonaModule = (jsCode) => {
+  // First, let's see what we're working with
+  console.log('Original JS Code for .shona module:', jsCode);
+  
+  // The translateShona function likely wraps code in an IIFE, we need to extract the functions
+  let cleanCode = jsCode;
+  
+  // Remove IIFE wrapper if present
+  cleanCode = cleanCode.replace(/^\s*\(\s*function\s*\(\)\s*{\s*/m, '');
+  cleanCode = cleanCode.replace(/\s*}\s*\)\s*\(\s*\)\s*;\s*$/m, '');
+  
+  // Remove helper functions that might be added by the translator
+  cleanCode = cleanCode.replace(/function\s+\$\$createText[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+\$\$listen[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+\$\$setAttribute[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+_runEffects[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+_render[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+_runComputations[\s\S]*?(?=function\s+\w+|$)/m, '');
+  
+  // Extract all function declarations (but skip helper functions)
+  const exportedFunctions = [];
+  const functionRegex = /function\s+(\w+)\s*\([^)]*\)\s*{/g;
+  let match;
+  
+  while ((match = functionRegex.exec(cleanCode)) !== null) {
+    const funcName = match[1];
+    // Skip helper functions
+    if (!funcName.startsWith('$$') && !funcName.startsWith('_') && funcName !== 'main') {
+      exportedFunctions.push(funcName);
+    }
+  }
+  
+  // Also check for arrow functions assigned to variables
+  const arrowFuncRegex = /(?:const|let|var)\s+(\w+)\s*=\s*(?:\([^)]*\)|[^=])\s*=>/g;
+  while ((match = arrowFuncRegex.exec(cleanCode)) !== null) {
+    const funcName = match[1];
+    if (!funcName.startsWith('$$') && !funcName.startsWith('_')) {
+      exportedFunctions.push(funcName);
+    }
+  }
+  
+  // Create a module that returns the functions
+  if (exportedFunctions.length > 0) {
+    // Build the module code that returns an object with all functions
+    const moduleCode = `
+${cleanCode}
 
-  const wrapShonaModule = (jsCode) => {
-    // Remove the helper functions and IIFE wrapper
-    let cleanCode = jsCode;
-    
-    // Remove the helper functions block
-    cleanCode = cleanCode.replace(/function \$\$createText[\s\S]*?function _runEffects\(\)[^}]*}/m, '');
-    
-    // Remove the wrapping (function(){ ... })();
-    cleanCode = cleanCode.replace(/^\s*\(\s*function\s*\(\)\s*{\s*/m, '');
-    cleanCode = cleanCode.replace(/\s*}\s*\)\s*\(\s*\)\s*;\s*$/m, '');
-    
-    // Extract all function declarations
-    const exportedFunctions = [];
-    
-    // Match function declarations (like "function sanganisa")
-    const funcMatches = cleanCode.matchAll(/function\s+(\w+)\s*\([^)]*\)/gm);
-    for (const match of funcMatches) {
-      exportedFunctions.push(match[1]);
-    }
-    
-    // Build the export statement
-    if (exportedFunctions.length > 0) {
-      // Export each function as a named export
-      const exports = exportedFunctions.map(fn => `export { ${fn} };`).join('\n');
-      
-      // Also create a default export with all functions
-      const defaultExport = `\nexport default { ${exportedFunctions.join(', ')} };`;
-      
-      return `${cleanCode}\n${exports}\n${defaultExport}`;
-    }
-    
-    return cleanCode;
-  };
+// Return module exports
+return {
+  ${exportedFunctions.join(',\n  ')}
+};
+`;
+    return moduleCode;
+  }
+  
+  // If no functions found, return the code as-is with empty export
+  return cleanCode + '\n\nreturn {};';
+};
 
   // Update code when file changes
   useEffect(() => {
