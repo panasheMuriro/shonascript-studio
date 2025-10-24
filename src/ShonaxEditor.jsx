@@ -507,59 +507,89 @@ main()`,
     setConsoleMessages([]);
   }, [code]);
 
-  const compileCode = useCallback(
-    debounce(async (sourceCode, fileName) => {
-      if (!fileName) return;
+const compileCode = useCallback(
+  debounce(async (sourceCode, fileName) => {
+    if (!fileName) return;
+    
+    setIsCompiling(true);
+    setErrors([]);
+    setWarnings([]);
+    
+    try {
+      const isShonax = fileName.endsWith('.shonax');
+      const isShona = fileName.endsWith('.shona');
       
-      setIsCompiling(true);
-      setErrors([]);
-      setWarnings([]);
+      let jsCode = '';
       
-      try {
-        const isShonax = fileName.endsWith('.shonax');
-        const isShona = fileName.endsWith('.shona');
+      if (isShonax) {
+        // Component file - use component compiler
+        const componentName = fileName.replace(/\.(shonax|shona)$/, '');
+        jsCode = compileComponent(sourceCode, componentName, {
+          target: 'component',
+          generateSourceMap: true
+        });
         
-        let jsCode = '';
+        // Use the new preview HTML with import support
+        const previewHtml = createPreviewHtmlWithImports(jsCode, files, currentFile);
+        setPreviewHtml(previewHtml);
+      } else if (isShona) {
+        // Regular Shona script - use regular translator
+        jsCode = translateShona(sourceCode, {
+          target: 'browser'
+        });
         
-        if (isShonax) {
-          // Component file - use component compiler
-          const componentName = fileName.replace(/\.(shonax|shona)$/, '');
-          jsCode = compileComponent(sourceCode, componentName, {
-            target: 'component',
-            generateSourceMap: true
-          });
-          
-          // Use the new preview HTML with import support
-          const previewHtml = createPreviewHtmlWithImports(jsCode, files, currentFile);
-          setPreviewHtml(previewHtml);
-        } else if (isShona) {
-          // Regular Shona script - use regular translator
-          jsCode = translateShona(sourceCode, {
-            target: 'browser'
-          });
-          
-          // Create a simple HTML wrapper for non-component scripts
-          const scriptHtml = createScriptHtml(jsCode);
-          setPreviewHtml(scriptHtml);
-        } else {
-          throw new Error('Unsupported file type. Use .shona or .shonax extension.');
-        }
-        
-        setCompiledCode(jsCode);
-        
-      } catch (error) {
-        console.error('Compilation error:', error);
-        setErrors([error.message]);
-      } finally {
-        setIsCompiling(false);
+        // Create HTML wrapper with import support - pass source code too
+        const scriptHtml = createScriptHtml(jsCode, files, sourceCode);
+        setPreviewHtml(scriptHtml);
+      } else {
+        throw new Error('Unsupported file type. Use .shona or .shonax extension.');
       }
-    }, 500),
-    [files, currentFile]
-  );
-
+      
+      setCompiledCode(jsCode);
+      
+    } catch (error) {
+      console.error('Compilation error:', error);
+      setErrors([error.message]);
+    } finally {
+      setIsCompiling(false);
+    }
+  }, 500),
+  [files, currentFile]
+);
   // Create HTML for non-component scripts
-  const createScriptHtml = (jsCode) => {
-    return `<!DOCTYPE html>
+const createScriptHtml = (jsCode, allFiles = files, sourceCode = code) => {
+  // First, extract imports from the SOURCE code (before translation)
+  const importRegex = /tora\s+(\w+)\s+kubva\s+mu\s+["']([^"']+)["']/g;
+  const imports = [];
+  let match;
+  
+  while ((match = importRegex.exec(sourceCode)) !== null) {
+    const [, importName, modulePath] = match;
+    const cleanPath = modulePath.replace(/\.(shona|shonax)$/, '');
+    imports.push({ importName, modulePath: cleanPath });
+  }
+  
+  // Compile all available .shona modules to make them available
+  const compiledModules = {};
+  
+  allFiles.forEach(file => {
+    if (file.path.endsWith('.shona') && file.path !== currentFile?.path) {
+      try {
+        const compiled = translateShona(file.content, { target: 'browser' });
+        const wrapped = wrapShonaModule(compiled);
+        const moduleName = file.name.replace('.shona', '');
+        compiledModules[moduleName] = wrapped;
+        // Also store with various path formats
+        compiledModules[file.name] = wrapped;
+        compiledModules[`./${file.name}`] = wrapped;
+        compiledModules[file.path] = wrapped;
+      } catch (error) {
+        console.error(`Error compiling ${file.path}:`, error);
+      }
+    }
+  });
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -594,6 +624,39 @@ main()`,
 <body>
     <div id="console-output" class="console-output"></div>
     <script>
+        // Compiled modules available for import
+        const __modules = ${JSON.stringify(compiledModules)};
+        const __moduleCache = {};
+        
+        // Function to load a module
+        function loadModule(moduleName) {            
+            if (__moduleCache[moduleName]) {
+                return __moduleCache[moduleName];
+            }
+            
+            // Try different path variations
+            const moduleCode = __modules[moduleName] || 
+                              __modules[moduleName + '.shona'] || 
+                              __modules['./' + moduleName] ||
+                              __modules['./' + moduleName + '.shona'];
+                              
+            if (moduleCode) {
+                try {
+
+                    const moduleFunc = new Function(moduleCode);
+                    const moduleExports = moduleFunc();
+                    __moduleCache[moduleName] = moduleExports;
+                    return moduleExports;
+                } catch (error) {
+                    console.error('Error loading module ' + moduleName + ':', error);
+                    return null;
+                }
+            }
+            
+            console.error('Module not found: ' + moduleName);
+            return null;
+        }
+        
         // Override console to show output in page
         const output = document.getElementById('console-output');
         const originalConsole = {
@@ -638,16 +701,54 @@ main()`,
             originalConsole.info(...arguments);
         };
         
-        // Execute the script
+        // Pre-load imports based on source code analysis
+        const imports = ${JSON.stringify(imports)};
+
+        
+        // Load all imports before executing the main code
+        const importedModules = {};
+        for (const imp of imports) {
+            const module = loadModule(imp.modulePath);
+            if (module) {
+                // Check if the imported name exists in the module
+                if (module[imp.importName]) {
+                    // It's a named export
+                    window[imp.importName] = module[imp.importName];
+                    importedModules[imp.importName] = module[imp.importName];
+                } else if (typeof module === 'function') {
+                    // It's a default export (function)
+                    window[imp.importName] = module;
+                    importedModules[imp.importName] = module;
+                } else {
+                    // It's an object with exports
+                    window[imp.importName] = module;
+                    importedModules[imp.importName] = module;
+                }
+       
+            } else {
+                console.error('Failed to import', imp.importName, 'from', imp.modulePath);
+            }
+        }
+        
+        // Process the main script code
+        let mainCode = ${JSON.stringify(jsCode)};
+        
+        // Remove the "Import from X ignored" comments
+        mainCode = mainCode.replace(/\\/\\/ Import from "[^"]*" ignored\\s*\\n/g, '');
+        
+        // Execute the processed script
         try {
-            ${jsCode}
+            // Create a wrapper function that has access to imported modules
+            const scriptFunc = new Function(...Object.keys(importedModules), mainCode);
+            scriptFunc(...Object.values(importedModules));
         } catch (error) {
             console.error('Script error:', error.message);
+            console.error('Stack:', error.stack);
         }
     </script>
 </body>
 </html>`;
-  };
+};
 
 
 const createPreviewHtmlWithImports = (jsCode, files) => {
@@ -868,8 +969,8 @@ const \${moduleName} = __tempModule_\${moduleName} && __tempModule_\${moduleName
                             const moduleFunc = new Function(transformedCode);
                             const result = moduleFunc();
                             
-                            // Log for debugging
-                            console.log(\`Loaded module \${p}:\`, result);
+                 
+             
                             
                             moduleCache[p] = result;
                         } catch (error) {
@@ -979,9 +1080,6 @@ const \${moduleName} = __tempModule_\${moduleName} && __tempModule_\${moduleName
 </html>`;
   };
 const wrapShonaModule = (jsCode) => {
-  // First, let's see what we're working with
-  console.log('Original JS Code for .shona module:', jsCode);
-  
   // The translateShona function likely wraps code in an IIFE, we need to extract the functions
   let cleanCode = jsCode;
   
@@ -999,31 +1097,42 @@ const wrapShonaModule = (jsCode) => {
   
   // Extract all function declarations (but skip helper functions)
   const exportedFunctions = [];
-  const functionRegex = /function\s+(\w+)\s*\([^)]*\)\s*{/g;
+  const functionBodies = {};
+  const functionRegex = /function\s+(\w+)\s*\([^)]*\)\s*{([^}]+{[^}]*}[^}]*|[^}]*)}/g;
   let match;
   
   while ((match = functionRegex.exec(cleanCode)) !== null) {
     const funcName = match[1];
+    const fullFunction = match[0];
     // Skip helper functions
     if (!funcName.startsWith('$$') && !funcName.startsWith('_') && funcName !== 'main') {
       exportedFunctions.push(funcName);
+      functionBodies[funcName] = fullFunction;
     }
   }
   
   // Also check for arrow functions assigned to variables
-  const arrowFuncRegex = /(?:const|let|var)\s+(\w+)\s*=\s*(?:\([^)]*\)|[^=])\s*=>/g;
+  const arrowFuncRegex = /((?:const|let|var)\s+(\w+)\s*=\s*(?:\([^)]*\)|[^=])\s*=>[^;]+;)/g;
   while ((match = arrowFuncRegex.exec(cleanCode)) !== null) {
-    const funcName = match[1];
+    const funcName = match[2];
+    const fullFunction = match[1];
     if (!funcName.startsWith('$$') && !funcName.startsWith('_')) {
       exportedFunctions.push(funcName);
+      functionBodies[funcName] = fullFunction;
     }
   }
   
-  // Create a module that returns the functions
+  // Create a module that returns ONLY the functions, no other code execution
   if (exportedFunctions.length > 0) {
-    // Build the module code that returns an object with all functions
+    // Build the module code with ONLY function definitions
+    const functionDefinitions = exportedFunctions
+      .map(funcName => functionBodies[funcName] || '')
+      .filter(Boolean)
+      .join('\n\n');
+    
     const moduleCode = `
-${cleanCode}
+// Module exports only - no code execution
+${functionDefinitions}
 
 // Return module exports
 return {
@@ -1033,8 +1142,8 @@ return {
     return moduleCode;
   }
   
-  // If no functions found, return the code as-is with empty export
-  return cleanCode + '\n\nreturn {};';
+  // If no functions found, return empty export
+  return 'return {};';
 };
 
   // Update code when file changes

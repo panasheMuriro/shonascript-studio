@@ -190,14 +190,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_program; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterProgram(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitProgram(this);
-		}
 	}
 
 	public final ProgramContext program() throws RecognitionException {
@@ -251,14 +243,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_programElement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterProgramElement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitProgramElement(this);
-		}
 	}
 
 	public final ProgramElementContext programElement() throws RecognitionException {
@@ -312,14 +296,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_line; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLine(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLine(this);
-		}
 	}
 
 	public final LineContext line() throws RecognitionException {
@@ -404,14 +380,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_statement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitStatement(this);
-		}
 	}
 
 	public final StatementContext statement() throws RecognitionException {
@@ -529,14 +497,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_simpleStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterSimpleStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitSimpleStatement(this);
-		}
 	}
 
 	public final SimpleStatementContext simpleStatement() throws RecognitionException {
@@ -745,14 +705,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_reactiveOneLiner; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterReactiveOneLiner(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitReactiveOneLiner(this);
-		}
 	}
 
 	public final ReactiveOneLinerContext reactiveOneLiner() throws RecognitionException {
@@ -806,14 +758,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ProgramElementContext.class,i);
 		}
 		public ReactiveBlockStmtContext(ReactiveBlockContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterReactiveBlockStmt(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitReactiveBlockStmt(this);
-		}
 	}
 
 	public final ReactiveBlockContext reactiveBlock() throws RecognitionException {
@@ -874,14 +818,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_linearObjectDefinition; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLinearObjectDefinition(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLinearObjectDefinition(this);
-		}
 	}
 
 	public final LinearObjectDefinitionContext linearObjectDefinition() throws RecognitionException {
@@ -942,14 +878,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_anonymousFunctionAssignment; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAnonymousFunctionAssignment(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAnonymousFunctionAssignment(this);
-		}
 	}
 
 	public final AnonymousFunctionAssignmentContext anonymousFunctionAssignment() throws RecognitionException {
@@ -1030,14 +958,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(LinearObjectEntriesContext.class,0);
 		}
 		public InlineObjectBodyContext(LinearObjectBodyContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterInlineObjectBody(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitInlineObjectBody(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class BlockObjectBodyContext extends LinearObjectBodyContext {
@@ -1048,14 +968,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode DEDENT() { return getToken(ShonascriptxParser.DEDENT, 0); }
 		public BlockObjectBodyContext(LinearObjectBodyContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterBlockObjectBody(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitBlockObjectBody(this);
-		}
 	}
 
 	public final LinearObjectBodyContext linearObjectBody() throws RecognitionException {
@@ -1130,14 +1042,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_linearObjectEntries; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLinearObjectEntries(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLinearObjectEntries(this);
-		}
 	}
 
 	public final LinearObjectEntriesContext linearObjectEntries() throws RecognitionException {
@@ -1204,14 +1108,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_linearObjectEntry; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLinearObjectEntry(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLinearObjectEntry(this);
-		}
 	}
 
 	public final LinearObjectEntryContext linearObjectEntry() throws RecognitionException {
@@ -1330,14 +1226,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_objectEntries; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterObjectEntries(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitObjectEntries(this);
-		}
 	}
 
 	public final ObjectEntriesContext objectEntries() throws RecognitionException {
@@ -1504,14 +1392,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode HAS() { return getToken(ShonascriptxParser.HAS, 0); }
 		public TerminalNode PANE() { return getToken(ShonascriptxParser.PANE, 0); }
 		public EmptyNestedObjContext(ObjectEntryContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterEmptyNestedObj(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitEmptyNestedObj(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ObjMethodContext extends ObjectEntryContext {
@@ -1528,14 +1408,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode FUNCTION() { return getToken(ShonascriptxParser.FUNCTION, 0); }
 		public TerminalNode BASA() { return getToken(ShonascriptxParser.BASA, 0); }
 		public ObjMethodContext(ObjectEntryContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterObjMethod(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitObjMethod(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ObjValueContext extends ObjectEntryContext {
@@ -1545,14 +1417,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ExpressionContext.class,0);
 		}
 		public ObjValueContext(ObjectEntryContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterObjValue(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitObjValue(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NestedObjContext extends ObjectEntryContext {
@@ -1567,14 +1431,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode HAS() { return getToken(ShonascriptxParser.HAS, 0); }
 		public TerminalNode PANE() { return getToken(ShonascriptxParser.PANE, 0); }
 		public NestedObjContext(ObjectEntryContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNestedObj(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNestedObj(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class InlineNestedObjContext extends ObjectEntryContext {
@@ -1586,14 +1442,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode HAS() { return getToken(ShonascriptxParser.HAS, 0); }
 		public TerminalNode PANE() { return getToken(ShonascriptxParser.PANE, 0); }
 		public InlineNestedObjContext(ObjectEntryContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterInlineNestedObj(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitInlineNestedObj(this);
-		}
 	}
 
 	public final ObjectEntryContext objectEntry() throws RecognitionException {
@@ -1770,14 +1618,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_propsDeclaration; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPropsDeclaration(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPropsDeclaration(this);
-		}
 	}
 
 	public final PropsDeclarationContext propsDeclaration() throws RecognitionException {
@@ -1843,14 +1683,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_compoundStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterCompoundStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitCompoundStatement(this);
-		}
 	}
 
 	public final CompoundStatementContext compoundStatement() throws RecognitionException {
@@ -1917,14 +1749,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_incrementStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterIncrementStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitIncrementStatement(this);
-		}
 	}
 
 	public final IncrementStatementContext incrementStatement() throws RecognitionException {
@@ -1959,14 +1783,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_decrementStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterDecrementStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitDecrementStatement(this);
-		}
 	}
 
 	public final DecrementStatementContext decrementStatement() throws RecognitionException {
@@ -2007,14 +1823,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_compoundAssignment; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterCompoundAssignment(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitCompoundAssignment(this);
-		}
 	}
 
 	public final CompoundAssignmentContext compoundAssignment() throws RecognitionException {
@@ -2048,14 +1856,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_compoundOp; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterCompoundOp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitCompoundOp(this);
-		}
 	}
 
 	public final CompoundOpContext compoundOp() throws RecognitionException {
@@ -2109,14 +1909,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode VAKASIYANA() { return getToken(ShonascriptxParser.VAKASIYANA, 0); }
 		public ExprToSetContext(SetDeclarationContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterExprToSet(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitExprToSet(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ArrayToSetContext extends SetDeclarationContext {
@@ -2127,14 +1919,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode EQ() { return getToken(ShonascriptxParser.EQ, 0); }
 		public TerminalNode VAKASIYANA() { return getToken(ShonascriptxParser.VAKASIYANA, 0); }
 		public ArrayToSetContext(SetDeclarationContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterArrayToSet(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitArrayToSet(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NewSetContext extends SetDeclarationContext {
@@ -2147,14 +1931,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ArrayElementsContext.class,0);
 		}
 		public NewSetContext(SetDeclarationContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNewSet(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNewSet(this);
-		}
 	}
 
 	public final SetDeclarationContext setDeclaration() throws RecognitionException {
@@ -2250,14 +2026,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public TerminalNode CHIKWIRA() { return getToken(ShonascriptxParser.CHIKWIRA, 0); }
 		public AscendingSortContext(SortStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAscendingSort(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAscendingSort(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ObjectAscSortContext extends SortStatementContext {
@@ -2269,14 +2037,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode EQUALITY_PREPOSITION() { return getToken(ShonascriptxParser.EQUALITY_PREPOSITION, 0); }
 		public TerminalNode CHIKWIRA() { return getToken(ShonascriptxParser.CHIKWIRA, 0); }
 		public ObjectAscSortContext(SortStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterObjectAscSort(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitObjectAscSort(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class DescendingSortContext extends SortStatementContext {
@@ -2284,28 +2044,12 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public TerminalNode CHIDZIKA() { return getToken(ShonascriptxParser.CHIDZIKA, 0); }
 		public DescendingSortContext(SortStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterDescendingSort(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitDescendingSort(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class DefaultSortContext extends SortStatementContext {
 		public TerminalNode RONGA() { return getToken(ShonascriptxParser.RONGA, 0); }
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public DefaultSortContext(SortStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterDefaultSort(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitDefaultSort(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ObjectDescSortContext extends SortStatementContext {
@@ -2317,14 +2061,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode EQUALITY_PREPOSITION() { return getToken(ShonascriptxParser.EQUALITY_PREPOSITION, 0); }
 		public TerminalNode CHIDZIKA() { return getToken(ShonascriptxParser.CHIDZIKA, 0); }
 		public ObjectDescSortContext(SortStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterObjectDescSort(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitObjectDescSort(this);
-		}
 	}
 
 	public final SortStatementContext sortStatement() throws RecognitionException {
@@ -2434,14 +2170,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode MU() { return getToken(ShonascriptxParser.MU, 0); }
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public DirectValueFilterContext(FilterStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterDirectValueFilter(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitDirectValueFilter(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ObjectFilterContext extends FilterStatementContext {
@@ -2458,14 +2186,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ExpressionContext.class,0);
 		}
 		public ObjectFilterContext(FilterStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterObjectFilter(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitObjectFilter(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class PrimitiveFilterContext extends FilterStatementContext {
@@ -2480,14 +2200,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode MU() { return getToken(ShonascriptxParser.MU, 0); }
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public PrimitiveFilterContext(FilterStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPrimitiveFilter(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPrimitiveFilter(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NounClassFilterContext extends FilterStatementContext {
@@ -2505,14 +2217,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode MU() { return getToken(ShonascriptxParser.MU, 0); }
 		public NounClassFilterContext(FilterStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNounClassFilter(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNounClassFilter(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ComplexFilterContext extends FilterStatementContext {
@@ -2524,14 +2228,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode MU() { return getToken(ShonascriptxParser.MU, 0); }
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public ComplexFilterContext(FilterStatementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterComplexFilter(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitComplexFilter(this);
-		}
 	}
 
 	public final FilterStatementContext filterStatement() throws RecognitionException {
@@ -2690,14 +2386,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_logicalFilterExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLogicalFilterExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLogicalFilterExpression(this);
-		}
 	}
 
 	public final LogicalFilterExpressionContext logicalFilterExpression() throws RecognitionException {
@@ -2804,14 +2492,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_comparisonOperator; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterComparisonOperator(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitComparisonOperator(this);
-		}
 	}
 
 	public final ComparisonOperatorContext comparisonOperator() throws RecognitionException {
@@ -2878,14 +2558,6 @@ public class ShonascriptxParser extends Parser {
 			return getToken(ShonascriptxParser.NEWLINE, i);
 		}
 		public HtmlVoidElementContext(HtmlElementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlVoidElement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlVoidElement(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class HtmlSelfClosingElementContext extends HtmlElementContext {
@@ -2910,14 +2582,6 @@ public class ShonascriptxParser extends Parser {
 			return getToken(ShonascriptxParser.NEWLINE, i);
 		}
 		public HtmlSelfClosingElementContext(HtmlElementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlSelfClosingElement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlSelfClosingElement(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class HtmlBlockElementContext extends HtmlElementContext {
@@ -2954,14 +2618,6 @@ public class ShonascriptxParser extends Parser {
 			return getToken(ShonascriptxParser.NEWLINE, i);
 		}
 		public HtmlBlockElementContext(HtmlElementContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlBlockElement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlBlockElement(this);
-		}
 	}
 
 	public final HtmlElementContext htmlElement() throws RecognitionException {
@@ -3224,14 +2880,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_tagName; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterTagName(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitTagName(this);
-		}
 	}
 
 	public final TagNameContext tagName() throws RecognitionException {
@@ -3282,14 +2930,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(EventHandlerContext.class,0);
 		}
 		public HtmlEventHandlerContext(AttributeContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlEventHandler(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlEventHandler(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class HtmlAttributeContext extends AttributeContext {
@@ -3302,14 +2942,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ShonaExpressionContext.class,0);
 		}
 		public HtmlAttributeContext(AttributeContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlAttribute(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlAttribute(this);
-		}
 	}
 
 	public final AttributeContext attribute() throws RecognitionException {
@@ -3383,14 +3015,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_attrName; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAttrName(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAttrName(this);
-		}
 	}
 
 	public final AttrNameContext attrName() throws RecognitionException {
@@ -3436,14 +3060,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_eventHandler; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterEventHandler(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitEventHandler(this);
-		}
 	}
 
 	public final EventHandlerContext eventHandler() throws RecognitionException {
@@ -3492,14 +3108,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlContent; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlContent(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlContent(this);
-		}
 	}
 
 	public final HtmlContentContext htmlContent() throws RecognitionException {
@@ -3559,14 +3167,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlContentElement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlContentElement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlContentElement(this);
-		}
 	}
 
 	public final HtmlContentElementContext htmlContentElement() throws RecognitionException {
@@ -3655,14 +3255,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_shonaControlFlow; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterShonaControlFlow(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitShonaControlFlow(this);
-		}
 	}
 
 	public final ShonaControlFlowContext shonaControlFlow() throws RecognitionException {
@@ -3752,14 +3344,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_conditionalInHtml; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterConditionalInHtml(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitConditionalInHtml(this);
-		}
 	}
 
 	public final ConditionalInHtmlContext conditionalInHtml() throws RecognitionException {
@@ -3838,14 +3422,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlContentUntilKeyword; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlContentUntilKeyword(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlContentUntilKeyword(this);
-		}
 	}
 
 	public final HtmlContentUntilKeywordContext htmlContentUntilKeyword() throws RecognitionException {
@@ -3896,14 +3472,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlContentToEnd; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlContentToEnd(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlContentToEnd(this);
-		}
 	}
 
 	public final HtmlContentToEndContext htmlContentToEnd() throws RecognitionException {
@@ -3968,14 +3536,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlContentPart; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlContentPart(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlContentPart(this);
-		}
 	}
 
 	public final HtmlContentPartContext htmlContentPart() throws RecognitionException {
@@ -4074,14 +3634,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlTextNotKeyword; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlTextNotKeyword(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlTextNotKeyword(this);
-		}
 	}
 
 	public final HtmlTextNotKeywordContext htmlTextNotKeyword() throws RecognitionException {
@@ -4164,14 +3716,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlTextContentNotKeyword; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlTextContentNotKeyword(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlTextContentNotKeyword(this);
-		}
 	}
 
 	public final HtmlTextContentNotKeywordContext htmlTextContentNotKeyword() throws RecognitionException {
@@ -4220,14 +3764,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_loopInHtml; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLoopInHtml(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLoopInHtml(this);
-		}
 	}
 
 	public final LoopInHtmlContext loopInHtml() throws RecognitionException {
@@ -4276,14 +3812,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_whileInHtml; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterWhileInHtml(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitWhileInHtml(this);
-		}
 	}
 
 	public final WhileInHtmlContext whileInHtml() throws RecognitionException {
@@ -4333,14 +3861,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(HtmlContentContext.class,0);
 		}
 		public HtmlBlockSuiteContext(HtmlSuiteContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlBlockSuite(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlBlockSuite(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class HtmlIndentedSuiteContext extends HtmlSuiteContext {
@@ -4351,14 +3871,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode DEDENT() { return getToken(ShonascriptxParser.DEDENT, 0); }
 		public HtmlIndentedSuiteContext(HtmlSuiteContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlIndentedSuite(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlIndentedSuite(this);
-		}
 	}
 
 	public final HtmlSuiteContext htmlSuite() throws RecognitionException {
@@ -4414,14 +3926,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_shonaExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterShonaExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitShonaExpression(this);
-		}
 	}
 
 	public final ShonaExpressionContext shonaExpression() throws RecognitionException {
@@ -4461,14 +3965,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlText; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlText(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlText(this);
-		}
 	}
 
 	public final HtmlTextContext htmlText() throws RecognitionException {
@@ -4553,14 +4049,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_htmlTextContent; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlTextContent(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlTextContent(this);
-		}
 	}
 
 	public final HtmlTextContentContext htmlTextContent() throws RecognitionException {
@@ -4602,14 +4090,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_inputStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterInputStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitInputStatement(this);
-		}
 	}
 
 	public final InputStatementContext inputStatement() throws RecognitionException {
@@ -4651,14 +4131,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_fetchStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterFetchStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitFetchStatement(this);
-		}
 	}
 
 	public final FetchStatementContext fetchStatement() throws RecognitionException {
@@ -4714,14 +4186,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_importStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterImportStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitImportStatement(this);
-		}
 	}
 
 	public final ImportStatementContext importStatement() throws RecognitionException {
@@ -4767,14 +4231,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_idList; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterIdList(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitIdList(this);
-		}
 	}
 
 	public final IdListContext idList() throws RecognitionException {
@@ -4823,14 +4279,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_modulePath; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterModulePath(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitModulePath(this);
-		}
 	}
 
 	public final ModulePathContext modulePath() throws RecognitionException {
@@ -4871,14 +4319,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_propName; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPropName(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPropName(this);
-		}
 	}
 
 	public final PropNameContext propName() throws RecognitionException {
@@ -4930,14 +4370,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_propertyRef; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPropertyRef(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPropertyRef(this);
-		}
 	}
 
 	public final PropertyRefContext propertyRef() throws RecognitionException {
@@ -4994,14 +4426,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_propertyDelete; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPropertyDelete(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPropertyDelete(this);
-		}
 	}
 
 	public final PropertyDeleteContext propertyDelete() throws RecognitionException {
@@ -5037,14 +4461,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_domSelector; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterDomSelector(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitDomSelector(this);
-		}
 	}
 
 	public final DomSelectorContext domSelector() throws RecognitionException {
@@ -5081,14 +4497,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_domPropertyRef; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterDomPropertyRef(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitDomPropertyRef(this);
-		}
 	}
 
 	public final DomPropertyRefContext domPropertyRef() throws RecognitionException {
@@ -5132,14 +4540,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_eventListenerStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterEventListenerStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitEventListenerStatement(this);
-		}
 	}
 
 	public final EventListenerStatementContext eventListenerStatement() throws RecognitionException {
@@ -5194,14 +4594,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_classStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterClassStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitClassStatement(this);
-		}
 	}
 
 	public final ClassStatementContext classStatement() throws RecognitionException {
@@ -5258,14 +4650,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_loopStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLoopStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLoopStatement(this);
-		}
 	}
 
 	public final LoopStatementContext loopStatement() throws RecognitionException {
@@ -5314,14 +4698,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_whileStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterWhileStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitWhileStatement(this);
-		}
 	}
 
 	public final WhileStatementContext whileStatement() throws RecognitionException {
@@ -5367,14 +4743,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_intervalStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterIntervalStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitIntervalStatement(this);
-		}
 	}
 
 	public final IntervalStatementContext intervalStatement() throws RecognitionException {
@@ -5418,14 +4786,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_timeoutStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterTimeoutStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitTimeoutStatement(this);
-		}
 	}
 
 	public final TimeoutStatementContext timeoutStatement() throws RecognitionException {
@@ -5462,14 +4822,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_continueStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterContinueStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitContinueStatement(this);
-		}
 	}
 
 	public final ContinueStatementContext continueStatement() throws RecognitionException {
@@ -5500,14 +4852,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_breakStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterBreakStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitBreakStatement(this);
-		}
 	}
 
 	public final BreakStatementContext breakStatement() throws RecognitionException {
@@ -5546,14 +4890,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_assignable; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAssignable(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAssignable(this);
-		}
 	}
 
 	public final AssignableContext assignable() throws RecognitionException {
@@ -5605,14 +4941,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_assignRoot; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAssignRoot(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAssignRoot(this);
-		}
 	}
 
 	public final AssignRootContext assignRoot() throws RecognitionException {
@@ -5669,14 +4997,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_memberAccess; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterMemberAccess(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitMemberAccess(this);
-		}
 	}
 
 	public final MemberAccessContext memberAccess() throws RecognitionException {
@@ -5739,14 +5059,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_assignment; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAssignment(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAssignment(this);
-		}
 	}
 
 	public final AssignmentContext assignment() throws RecognitionException {
@@ -5814,14 +5126,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_nyoraStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNyoraStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNyoraStatement(this);
-		}
 	}
 
 	public final NyoraStatementContext nyoraStatement() throws RecognitionException {
@@ -5880,14 +5184,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_arrayAdd; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterArrayAdd(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitArrayAdd(this);
-		}
 	}
 
 	public final ArrayAddContext arrayAdd() throws RecognitionException {
@@ -5929,14 +5225,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_arrayRemove; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterArrayRemove(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitArrayRemove(this);
-		}
 	}
 
 	public final ArrayRemoveContext arrayRemove() throws RecognitionException {
@@ -6001,14 +5289,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_conditionalStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterConditionalStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitConditionalStatement(this);
-		}
 	}
 
 	public final ConditionalStatementContext conditionalStatement() throws RecognitionException {
@@ -6130,14 +5410,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_functionDefinition; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterFunctionDefinition(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitFunctionDefinition(this);
-		}
 	}
 
 	public final FunctionDefinitionContext functionDefinition() throws RecognitionException {
@@ -6207,14 +5479,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_anonymousFunction; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAnonymousFunction(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAnonymousFunction(this);
-		}
 	}
 
 	public final AnonymousFunctionContext anonymousFunction() throws RecognitionException {
@@ -6276,14 +5540,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_returnStatement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterReturnStatement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitReturnStatement(this);
-		}
 	}
 
 	public final ReturnStatementContext returnStatement() throws RecognitionException {
@@ -6336,14 +5592,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(SimpleStatementContext.class,0);
 		}
 		public SingleLineSuiteContext(SuiteContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterSingleLineSuite(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitSingleLineSuite(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class BlockSuiteContext extends SuiteContext {
@@ -6357,14 +5605,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ProgramElementContext.class,i);
 		}
 		public BlockSuiteContext(SuiteContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterBlockSuite(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitBlockSuite(this);
-		}
 	}
 
 	public final SuiteContext suite() throws RecognitionException {
@@ -6464,14 +5704,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_expression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitExpression(this);
-		}
 	}
 
 	public final ExpressionContext expression() throws RecognitionException {
@@ -6511,14 +5743,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_conditionalExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterConditionalExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitConditionalExpression(this);
-		}
 	}
 
 	public final ConditionalExpressionContext conditionalExpression() throws RecognitionException {
@@ -6586,14 +5810,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_logicalOrExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLogicalOrExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLogicalOrExpression(this);
-		}
 	}
 
 	public final LogicalOrExpressionContext logicalOrExpression() throws RecognitionException {
@@ -6688,14 +5904,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_logicalAndExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLogicalAndExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLogicalAndExpression(this);
-		}
 	}
 
 	public final LogicalAndExpressionContext logicalAndExpression() throws RecognitionException {
@@ -6767,14 +5975,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_equalityExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterEqualityExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitEqualityExpression(this);
-		}
 	}
 
 	public final EqualityExpressionContext equalityExpression() throws RecognitionException {
@@ -6854,14 +6054,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_comparisonExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterComparisonExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitComparisonExpression(this);
-		}
 	}
 
 	public final ComparisonExpressionContext comparisonExpression() throws RecognitionException {
@@ -6933,14 +6125,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_additiveExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAdditiveExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAdditiveExpression(this);
-		}
 	}
 
 	public final AdditiveExpressionContext additiveExpression() throws RecognitionException {
@@ -7016,14 +6200,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_multiplicativeExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterMultiplicativeExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitMultiplicativeExpression(this);
-		}
 	}
 
 	public final MultiplicativeExpressionContext multiplicativeExpression() throws RecognitionException {
@@ -7088,14 +6264,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_powerExpression; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPowerExpression(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPowerExpression(this);
-		}
 	}
 
 	public final PowerExpressionContext powerExpression() throws RecognitionException {
@@ -7149,14 +6317,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(PrimaryExpressionContext.class,0);
 		}
 		public PrimaryExprContext(UnaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPrimaryExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPrimaryExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class UnaryOpContext extends UnaryExpressionContext {
@@ -7167,14 +6327,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode MINUS() { return getToken(ShonascriptxParser.MINUS, 0); }
 		public TerminalNode NOT() { return getToken(ShonascriptxParser.NOT, 0); }
 		public UnaryOpContext(UnaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterUnaryOp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitUnaryOp(this);
-		}
 	}
 
 	public final UnaryExpressionContext unaryExpression() throws RecognitionException {
@@ -7262,14 +6414,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public TerminalNode VAKASIYANA() { return getToken(ShonascriptxParser.VAKASIYANA, 0); }
 		public VarToSetExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterVarToSetExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitVarToSetExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ParensContext extends PrimaryExpressionContext {
@@ -7279,14 +6423,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode RPAREN() { return getToken(ShonascriptxParser.RPAREN, 0); }
 		public ParensContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterParens(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitParens(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class AnonymousFunctionExprContext extends PrimaryExpressionContext {
@@ -7302,27 +6438,11 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ParameterListContext.class,0);
 		}
 		public AnonymousFunctionExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterAnonymousFunctionExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitAnonymousFunctionExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class StringContext extends PrimaryExpressionContext {
 		public TerminalNode STRING() { return getToken(ShonascriptxParser.STRING, 0); }
 		public StringContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterString(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitString(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NounClassExistenceContext extends PrimaryExpressionContext {
@@ -7331,14 +6451,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode RIPO_SUFFIX() { return getToken(ShonascriptxParser.RIPO_SUFFIX, 0); }
 		public NounClassExistenceContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNounClassExistence(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNounClassExistence(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ArrayLiteralContext extends PrimaryExpressionContext {
@@ -7352,14 +6464,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ArrayElementsContext.class,0);
 		}
 		public ArrayLiteralContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterArrayLiteral(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitArrayLiteral(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class IndexOpContext extends PrimaryExpressionContext {
@@ -7371,14 +6475,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public TerminalNode STRING() { return getToken(ShonascriptxParser.STRING, 0); }
 		public IndexOpContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterIndexOp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitIndexOp(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class InStringOpContext extends PrimaryExpressionContext {
@@ -7389,14 +6485,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode MU() { return getToken(ShonascriptxParser.MU, 0); }
 		public TerminalNode STRING() { return getToken(ShonascriptxParser.STRING, 0); }
 		public InStringOpContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterInStringOp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitInStringOp(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class PropertyAccessContext extends PrimaryExpressionContext {
@@ -7409,14 +6497,6 @@ public class ShonascriptxParser extends Parser {
 			return getToken(ShonascriptxParser.POS, i);
 		}
 		public PropertyAccessContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPropertyAccess(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPropertyAccess(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NounClassInequalityContext extends PrimaryExpressionContext {
@@ -7428,14 +6508,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode SIRI_SUFFIX() { return getToken(ShonascriptxParser.SIRI_SUFFIX, 0); }
 		public NounClassInequalityContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNounClassInequality(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNounClassInequality(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class TimeoutExprContext extends PrimaryExpressionContext {
@@ -7448,14 +6520,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode SECONDS() { return getToken(ShonascriptxParser.SECONDS, 0); }
 		public TimeoutExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterTimeoutExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitTimeoutExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class BracketAccessContext extends PrimaryExpressionContext {
@@ -7468,14 +6532,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode RBRACKET() { return getToken(ShonascriptxParser.RBRACKET, 0); }
 		public BracketAccessContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterBracketAccess(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitBracketAccess(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class LengthExprContext extends PrimaryExpressionContext {
@@ -7484,27 +6540,11 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(PrimaryExpressionContext.class,0);
 		}
 		public LengthExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterLengthExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitLengthExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NumberContext extends PrimaryExpressionContext {
 		public TerminalNode NUMBER() { return getToken(ShonascriptxParser.NUMBER, 0); }
 		public NumberContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNumber(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNumber(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class JoinExprContext extends PrimaryExpressionContext {
@@ -7513,14 +6553,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(PrimaryExpressionContext.class,0);
 		}
 		public JoinExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterJoinExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitJoinExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ExprToSetExprContext extends PrimaryExpressionContext {
@@ -7529,27 +6561,11 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode VAKASIYANA() { return getToken(ShonascriptxParser.VAKASIYANA, 0); }
 		public ExprToSetExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterExprToSetExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitExprToSetExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ZvanyorwaVarContext extends PrimaryExpressionContext {
 		public TerminalNode ZVANYORWA() { return getToken(ShonascriptxParser.ZVANYORWA, 0); }
 		public ZvanyorwaVarContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterZvanyorwaVar(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitZvanyorwaVar(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NaturalEqualityOpContext extends PrimaryExpressionContext {
@@ -7562,14 +6578,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ExpressionContext.class,0);
 		}
 		public NaturalEqualityOpContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNaturalEqualityOp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNaturalEqualityOp(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class JsObjLiteralContext extends PrimaryExpressionContext {
@@ -7577,14 +6585,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(JsObjectLiteralContext.class,0);
 		}
 		public JsObjLiteralContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterJsObjLiteral(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitJsObjLiteral(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ArrayRangeContext extends PrimaryExpressionContext {
@@ -7594,14 +6594,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode RBRACKET() { return getToken(ShonascriptxParser.RBRACKET, 0); }
 		public ArrayRangeContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterArrayRange(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitArrayRange(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class HtmlExprContext extends PrimaryExpressionContext {
@@ -7609,14 +6601,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(HtmlElementContext.class,0);
 		}
 		public HtmlExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterHtmlExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitHtmlExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class ObjLiteralContext extends PrimaryExpressionContext {
@@ -7624,28 +6608,12 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ObjectLiteralContext.class,0);
 		}
 		public ObjLiteralContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterObjLiteral(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitObjLiteral(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class InputExprContext extends PrimaryExpressionContext {
 		public TerminalNode BVUNZA() { return getToken(ShonascriptxParser.BVUNZA, 0); }
 		public TerminalNode STRING() { return getToken(ShonascriptxParser.STRING, 0); }
 		public InputExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterInputExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitInputExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NounClassEqualityContext extends PrimaryExpressionContext {
@@ -7657,14 +6625,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode NCLASS() { return getToken(ShonascriptxParser.NCLASS, 0); }
 		public NounClassEqualityContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNounClassEquality(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNounClassEquality(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class PropertyGetContext extends PrimaryExpressionContext {
@@ -7672,14 +6632,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(PropertyRefContext.class,0);
 		}
 		public PropertyGetContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterPropertyGet(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitPropertyGet(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class DotAccessContext extends PrimaryExpressionContext {
@@ -7689,14 +6641,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode DOT() { return getToken(ShonascriptxParser.DOT, 0); }
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public DotAccessContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterDotAccess(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitDotAccess(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class InArrayOpContext extends PrimaryExpressionContext {
@@ -7709,27 +6653,11 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ExpressionContext.class,0);
 		}
 		public InArrayOpContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterInArrayOp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitInArrayOp(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class BooleanContext extends PrimaryExpressionContext {
 		public TerminalNode BOOLEAN() { return getToken(ShonascriptxParser.BOOLEAN, 0); }
 		public BooleanContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterBoolean(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitBoolean(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class DomPropertyGetContext extends PrimaryExpressionContext {
@@ -7737,14 +6665,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(DomPropertyRefContext.class,0);
 		}
 		public DomPropertyGetContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterDomPropertyGet(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitDomPropertyGet(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class FunctionCallContext extends PrimaryExpressionContext {
@@ -7755,14 +6675,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ArgumentListContext.class,0);
 		}
 		public FunctionCallContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterFunctionCall(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitFunctionCall(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class FetchExprContext extends PrimaryExpressionContext {
@@ -7775,27 +6687,11 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode KU() { return getToken(ShonascriptxParser.KU, 0); }
 		public TerminalNode STRING() { return getToken(ShonascriptxParser.STRING, 0); }
 		public FetchExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterFetchExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitFetchExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class VariableContext extends PrimaryExpressionContext {
 		public TerminalNode ID() { return getToken(ShonascriptxParser.ID, 0); }
 		public VariableContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterVariable(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitVariable(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NounClassNonExistenceContext extends PrimaryExpressionContext {
@@ -7804,14 +6700,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode SIPO_SUFFIX() { return getToken(ShonascriptxParser.SIPO_SUFFIX, 0); }
 		public NounClassNonExistenceContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterNounClassNonExistence(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitNounClassNonExistence(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class IntervalExprContext extends PrimaryExpressionContext {
@@ -7824,14 +6712,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode SECONDS() { return getToken(ShonascriptxParser.SECONDS, 0); }
 		public IntervalExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterIntervalExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitIntervalExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class SetExprContext extends PrimaryExpressionContext {
@@ -7842,14 +6722,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ArrayElementsContext.class,0);
 		}
 		public SetExprContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterSetExpr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitSetExpr(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class MethodCallContext extends PrimaryExpressionContext {
@@ -7868,14 +6740,6 @@ public class ShonascriptxParser extends Parser {
 			return getRuleContext(ArgumentListContext.class,0);
 		}
 		public MethodCallContext(PrimaryExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterMethodCall(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitMethodCall(this);
-		}
 	}
 
 	public final PrimaryExpressionContext primaryExpression() throws RecognitionException {
@@ -8513,14 +7377,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_objectLiteral; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterObjectLiteral(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitObjectLiteral(this);
-		}
 	}
 
 	public final ObjectLiteralContext objectLiteral() throws RecognitionException {
@@ -8582,14 +7438,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_jsObjectLiteral; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterJsObjectLiteral(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitJsObjectLiteral(this);
-		}
 	}
 
 	public final JsObjectLiteralContext jsObjectLiteral() throws RecognitionException {
@@ -8677,14 +7525,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_jsObjectEntries; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterJsObjectEntries(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitJsObjectEntries(this);
-		}
 	}
 
 	public final JsObjectEntriesContext jsObjectEntries() throws RecognitionException {
@@ -8808,14 +7648,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_jsObjectEntry; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterJsObjectEntry(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitJsObjectEntry(this);
-		}
 	}
 
 	public final JsObjectEntryContext jsObjectEntry() throws RecognitionException {
@@ -8878,14 +7710,6 @@ public class ShonascriptxParser extends Parser {
 		}
 		public TerminalNode ELLIPSIS() { return getToken(ShonascriptxParser.ELLIPSIS, 0); }
 		public FullRangeContext(RangeExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterFullRange(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitFullRange(this);
-		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class SimpleRangeContext extends RangeExpressionContext {
@@ -8898,14 +7722,6 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode COMMA() { return getToken(ShonascriptxParser.COMMA, 0); }
 		public TerminalNode ELLIPSIS() { return getToken(ShonascriptxParser.ELLIPSIS, 0); }
 		public SimpleRangeContext(RangeExpressionContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterSimpleRange(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitSimpleRange(this);
-		}
 	}
 
 	public final RangeExpressionContext rangeExpression() throws RecognitionException {
@@ -8980,14 +7796,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_arrayElements; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterArrayElements(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitArrayElements(this);
-		}
 	}
 
 	public final ArrayElementsContext arrayElements() throws RecognitionException {
@@ -9125,14 +7933,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_arrayElement; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterArrayElement(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitArrayElement(this);
-		}
 	}
 
 	public final ArrayElementContext arrayElement() throws RecognitionException {
@@ -9185,14 +7985,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_argumentList; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterArgumentList(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitArgumentList(this);
-		}
 	}
 
 	public final ArgumentListContext argumentList() throws RecognitionException {
@@ -9247,14 +8039,6 @@ public class ShonascriptxParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_parameterList; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).enterParameterList(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ShonascriptxListener ) ((ShonascriptxListener)listener).exitParameterList(this);
-		}
 	}
 
 	public final ParameterListContext parameterList() throws RecognitionException {

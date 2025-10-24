@@ -617,6 +617,24 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 	}
 
 
+	// Enter a parse tree produced by ShonascriptxParser#defaultAndNamedImport.
+	enterDefaultAndNamedImport(ctx) {
+	}
+
+	// Exit a parse tree produced by ShonascriptxParser#defaultAndNamedImport.
+	exitDefaultAndNamedImport(ctx) {
+	}
+
+
+	// Enter a parse tree produced by ShonascriptxParser#namedOnlyImport.
+	enterNamedOnlyImport(ctx) {
+	}
+
+	// Exit a parse tree produced by ShonascriptxParser#namedOnlyImport.
+	exitNamedOnlyImport(ctx) {
+	}
+
+
 	// Enter a parse tree produced by ShonascriptxParser#idList.
 	enterIdList(ctx) {
 	}
@@ -1013,6 +1031,15 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 	}
 
 
+	// Enter a parse tree produced by ShonascriptxParser#arrowFuncMultiParam.
+	enterArrowFuncMultiParam(ctx) {
+	}
+
+	// Exit a parse tree produced by ShonascriptxParser#arrowFuncMultiParam.
+	exitArrowFuncMultiParam(ctx) {
+	}
+
+
 	// Enter a parse tree produced by ShonascriptxParser#arrayLiteral.
 	enterArrayLiteral(ctx) {
 	}
@@ -1040,30 +1067,12 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 	}
 
 
-	// Enter a parse tree produced by ShonascriptxParser#propertyAccess.
-	enterPropertyAccess(ctx) {
-	}
-
-	// Exit a parse tree produced by ShonascriptxParser#propertyAccess.
-	exitPropertyAccess(ctx) {
-	}
-
-
 	// Enter a parse tree produced by ShonascriptxParser#nounClassInequality.
 	enterNounClassInequality(ctx) {
 	}
 
 	// Exit a parse tree produced by ShonascriptxParser#nounClassInequality.
 	exitNounClassInequality(ctx) {
-	}
-
-
-	// Enter a parse tree produced by ShonascriptxParser#timeoutExpr.
-	enterTimeoutExpr(ctx) {
-	}
-
-	// Exit a parse tree produced by ShonascriptxParser#timeoutExpr.
-	exitTimeoutExpr(ctx) {
 	}
 
 
@@ -1229,6 +1238,15 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 	}
 
 
+	// Enter a parse tree produced by ShonascriptxParser#arrowFuncSingleParam.
+	enterArrowFuncSingleParam(ctx) {
+	}
+
+	// Exit a parse tree produced by ShonascriptxParser#arrowFuncSingleParam.
+	exitArrowFuncSingleParam(ctx) {
+	}
+
+
 	// Enter a parse tree produced by ShonascriptxParser#functionCall.
 	enterFunctionCall(ctx) {
 	}
@@ -1262,15 +1280,6 @@ export default class ShonascriptxListener extends antlr4.tree.ParseTreeListener 
 
 	// Exit a parse tree produced by ShonascriptxParser#nounClassNonExistence.
 	exitNounClassNonExistence(ctx) {
-	}
-
-
-	// Enter a parse tree produced by ShonascriptxParser#intervalExpr.
-	enterIntervalExpr(ctx) {
-	}
-
-	// Exit a parse tree produced by ShonascriptxParser#intervalExpr.
-	exitIntervalExpr(ctx) {
 	}
 
 

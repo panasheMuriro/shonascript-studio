@@ -13,7 +13,7 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
         this.effectCounter = 0;
 
         this.textNodeCounter = 0;
-         this.componentImports = new Map();
+        this.componentImports = new Map();
 
 
         // Scope management
@@ -253,531 +253,116 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
     =            PROGRAM (ENTRY POINT)            =
     ============================================= */
 
-    // Replace the visitProgram method with this updated version:
-//     visitProgram(ctx) {
-//         const input = ctx.start.getInputStream();
-//         const fullText = input.getText(0, input.size - 1);
 
-//         if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
-//             throw new Error('style elements cannot be assigned to variables');
-//         }
 
-//         this.computedCode = [];
-
-//         const isComponent = this.target === 'component';
-//         if (isComponent) {
-//             this.parentStack = ['root'];
-//             this.elementCounter = 0;
-//         }
-//         if (this.target === 'node' && this.containsFetch(ctx))
-//             this.inAsyncWrapper = true;
-
-//         const emittedLines = [];
-//         const componentVars = [];
-//         const componentFns = [];
-//         let rootElement = null;
-
-//         // Special handling for style tags at the top level
-//         if (isComponent && fullText.includes('<style>')) {
-//             // Extract style content manually from the full text
-//             const styleMatch = fullText.match(/<style>([\s\S]*?)<\/style>/);
-//             if (styleMatch) {
-//                 const styleContent = styleMatch[1].trim();
-//                 const styleElName = `el${this.elementCounter++}`;
-
-//                 const styleCode = `const ${styleElName} = document.createElement('style');\n` +
-//                     `${styleElName}.textContent = \`${styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;\n` +
-//                     `document.head.appendChild(${styleElName});\n`;
-
-//                 emittedLines.push(styleCode);
-
-          
-
-//                 for (const child of ctx.children ?? []) {
-//                     const childText = child.getText ? child.getText() : '';
-
-//                     // Skip the broken style-related parse nodes
-//                     if (childText.includes('style>') || childText.includes('.redText') ||
-//                         childText.includes('color:') || childText.includes('red;}') ||
-//                         childText === '{' || childText === '}' || childText === '<' ||
-//                         childText === '</' || childText === ':' ||
-//                         childText.includes('<missing')) {
-//                         continue;
-//                     }
-
-//                     // Look for the actual HTML content
-//                     if (childText.includes('<div>') ||
-//                         (child.constructor.name === 'ProgramElementContext' &&
-//                             child.htmlElement && child.htmlElement())) {
-
-//                         // Found valid HTML element
-//                         const currentElName = `el${this.elementCounter}`;
-//                         const code = this.visit(child);
-//                         if (code) {
-//                             emittedLines.push(code);
-//                             if (!rootElement) {
-//                                 rootElement = currentElName;
-//                             }
-//                         }
-//                         continue;
-//                     }
-
-//                     // Process other valid children
-//                     if (child.symbol?.type === antlr4.Token.EOF ||
-//                         child.constructor.name === 'ErrorNodeImpl') continue;
-
-//                     if (child.constructor.name === 'ProgramElementContext') {
-//                         if (child.line && child.line()) {
-//                             const stmt = child.line().statement?.();
-//                             if (!stmt) continue;
-
-//                             if (stmt.simpleStatement?.()?.assignment?.()) {
-//                                 const code = this.visit(stmt);
-//                                 if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-//                                 continue;
-//                             }
-
-//                             if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-//                                 const code = this.visit(stmt.compoundStatement().functionDefinition());
-//                                 if (code.trim()) componentFns.push(code);
-//                                 continue;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         } else {
-//             // Normal processing for non-style content
-//             for (const child of ctx.children ?? []) {
-
-
-
-//                 if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
-
-//                 if (isComponent && child.constructor.name === 'ProgramElementContext') {
-
-
-//                     if (child.reactiveBlock && child.reactiveBlock()) {
-
-//                         this.visit(child.reactiveBlock());
-//                         continue;
-//                     }
-
-//                     if (child.htmlElement && child.htmlElement()) {
-
-//                         const currentElName = `el${this.elementCounter}`;
-//                         const htmlElCtx = child.htmlElement();
-
-
-
-//                         if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
-
-//                             continue;
-//                         }
-//                         const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
-
-
-//                         const code = this.visit(child.htmlElement());
-//                         if (code) emittedLines.push(code);
-
-//                         if (!rootElement && tagName !== 'style') {
-//                             rootElement = currentElName;
-//                         }
-//                         continue;
-//                     }
-
-//                     if (child.line && child.line()) {
-
-//                         const stmt = child.line().statement?.();
-//                         if (!stmt) continue;
-
-//                         if (stmt.simpleStatement?.()?.assignment?.()) {
-//                             const code = this.visit(stmt);
-//                             if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-//                             continue;
-//                         }
-
-//                         if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
-//                             const code = this.visit(stmt);
-//                             if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-//                             continue;
-//                         }
-
-//                         if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-//                             const code = this.visit(stmt.compoundStatement().functionDefinition());
-//                             if (code.trim()) componentFns.push(code);
-//                             continue;
-//                         }
-//                     }
-//                 }
-
-//                 const code = this.visit(child);
-
-//                 if (code) emittedLines.push(code);
-//             }
-//         }
-
-//         const bodyCode = emittedLines.filter(Boolean).join('\n');
-
-//         /* ========== 3. helper snippets ========== */
-//         const helpers = `
-
-// function $$createText(data){
-
-//     if (data && data.nodeType) return data;
-//     return document.createTextNode(data);
-// }
-// function $$listen(node,e,h){node.addEventListener(e,h);}
-// function $$setAttribute(n,a,v){
-//     if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
-
-//     else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
-//     else{n.setAttribute(a,v);}
-// }const _effects = [];
-// function _runEffects(){ for(const f of _effects) f();}`;
-
-//         /* ========== 4. COMPONENT OUTPUT (RE-ARCHITECTURED) ========== */
-//         if (isComponent) {
-
-// let importStatements = '';
-// if (this.componentImports && this.componentImports.size > 0) {
-//     for (const [path, symbols] of this.componentImports) {
-//         // Normalize the import path
-//         let importPath = path;
-        
-//         // Check if it's an external URL (http://, https://, etc.)
-//         const isExternalURL = path.match(/^https?:\/\//) || path.match(/^[a-z]+:\/\//);
-        
-//         if (isExternalURL) {
-//             // Keep external URLs as-is (no .js extension)
-//             importPath = path;
-//         } else if (!path.includes('/') && !path.includes('.')) {
-//             // Simple module name without path
-//             importPath = `./${path}.js`;
-//         } else if (path.endsWith('.shonax')) {
-//             importPath = path.replace(/\.shonax$/, '.js');
-//         } else if (path.endsWith('.shona')) {
-//             importPath = path.replace(/\.shona$/, '.js');
-//         } else if (!path.endsWith('.js')) {
-//             importPath = `${path}.js`;
-//         }
-        
-//         // Import all symbols from this path
-//         const symbolsList = Array.from(symbols);
-        
-//         // Check if this is likely a utility module (not a component)
-//         const isUtilityModule = !isExternalURL && (
-//             path === 'example' || 
-//             path === 'utils' ||
-//             path.endsWith('.shona') || 
-//             (!path.match(/^[A-Z]/) && !path.includes('Component'))
-//         );
-        
-//         if (isExternalURL) {
-//             // External URLs are usually default exports
-//             // Import each symbol as a default export
-//             symbolsList.forEach(symbol => {
-//                 importStatements += `import ${symbol} from '${importPath}';\n`;
-//             });
-//         } else if (isUtilityModule && symbolsList.length > 1) {
-//             // For utility modules with multiple exports, import as module
-//             importStatements += `import utilModule from '${importPath}';\n`;
-//             symbolsList.forEach(symbol => {
-//                 importStatements += `const ${symbol} = utilModule.${symbol};\n`;
-//             });
-//         } else {
-//             // Components - use default imports
-//             symbolsList.forEach(symbol => {
-//                 importStatements += `import ${symbol} from '${importPath}';\n`;
-//             });
-//         }
-//     }
-//     if (importStatements) {
-//         importStatements += '\n';
-//     }
-// }
-//             const hasIntervals = bodyCode.includes('setInterval(');
-//     const hasTimeouts = bodyCode.includes('setTimeout(');
-    
-//     // Separate setup code (intervals/timeouts) from render code
-//     let setupCode = '';
-//     let renderBodyCode = bodyCode;
-    
-//     if (hasIntervals || hasTimeouts) {
-//         // Extract interval/timeout statements from the body
-//         const lines = bodyCode.split('\n');
-//         const setupLines = [];
-//         const renderLines = [];
-        
-//         for (const line of lines) {
-//             if (line.trim().includes('setInterval(') || line.trim().includes('setTimeout(')) {
-//                 setupLines.push(line);
-//             } else {
-//                 renderLines.push(line);
-//             }
-//         }
-        
-//         setupCode = setupLines.join('\n');
-//         renderBodyCode = renderLines.join('\n');
-//     }
-//             const destructure = this.componentProps.length
-//                 ? `const { ${this.componentProps.join(', ')} } = props;`
-//                 : '';
-//             const varDecls = componentVars.length
-//                 ? componentVars.map(l => '    ' + l + ';').join('\n')
-//                 : '';
-//             const fnDecls = componentFns.length
-//                 ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
-//                 : '';
-
-//             // Check if zvanyorwa is needed
-//             const needsZvanyorwa = bodyCode.includes('zvanyorwa');
-//             const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
-
-
-
-
-//             // Indent the DOM creation logic to fit inside the _render function
-//             // const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
-//     const indentedBody = renderBodyCode.split('\n').map(l => '        ' + l).join('\n');
-
-
-
-//                return `${importStatements}${helpers}
-
-// export default function ${this.componentName}(props = {}) {
-
-//     const root = document.createElement('div');
-
-//     ${destructure}
-// ${varDecls}
-// ${zvanyorwaDecl}
-// ${fnDecls}
-
-//     function _runComputations() {
-// ${this.computedCode.map(line => '        ' + line).join('\n')}
-//     }
-
-//    function _render() {
-//     /* remember focus */
-//     const activeElem = root.contains(document.activeElement)
-//                        ? document.activeElement : null;
-//     const activeKey  = activeElem ? activeElem.getAttribute('data-k') : null;
-//     const caretStart = activeElem?.selectionStart ?? null;
-//     const caretEnd   = activeElem?.selectionEnd   ?? null;
-
-//     _runComputations();
-
-//     root.innerHTML = '';
-// ${indentedBody}
-
-//     /* restore focus */
-//     if (activeKey) {
-//         requestAnimationFrame(() => {
-//             const fresh = root.querySelector('[data-k="'+activeKey+'"]');
-//             if (fresh && fresh !== document.activeElement) {
-//                 fresh.focus({ preventScroll:true });
-//                 if (caretStart!==null && caretEnd!==null && fresh.setSelectionRange)
-//                     fresh.setSelectionRange(caretStart, caretEnd);
-//             }
-//         });
-//     }
-// }
-
-//     const _effects = [_render];
-//     function _runEffects() {
-//         for (const f of _effects) f();
-//     }
-
-//     _render(); // Initial render call.
-    
-//     // Set up intervals and timeouts after initial render
-// ${setupCode}
-
-//     return root;
-// }`;
-// }
-
-//         /* ========== 5. REGULAR (SCRIPT) OUTPUT (UNCHANGED) ========== */
-//         let header = '';
-//         if (this.target === 'node') {
-//             for (const [mod, symbols] of this.imports)
-//                 header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
-//             if (this.imports.size) header += '\n';
-//             if (this.promptInjected) header +=
-//                 'import promptSync from "prompt-sync";\n' +
-//                 'const prompt = promptSync({ sigint: true });\n\n';
-//         }
-
-//         const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
-//         if (this.inAsyncWrapper && globals.length)
-//             header += `let ${globals.join(', ')};\n\n`;
-
-//         if (this.inAsyncWrapper) {
-//             const wrapper = `(async () => {\n${bodyCode}\n})();\n`;
-//             const exports = globals.length && this.target === 'node'
-//                 ? `export { ${globals.join(', ')} };\n` : '';
-//             return header + helpers + '\n\n' + wrapper + exports;
-//         }
-
-//         if (globals.length && this.target === 'node')
-//             header += `export { ${globals.join(', ')} };\n\n`;
-
-//         return header + helpers + '\n\n(function(){\n' + bodyCode + '\n})();';
-//     }
-visitProgram(ctx) {
-    const input = ctx.start.getInputStream();
-    const fullText = input.getText(0, input.size - 1);
-
-    if (/^\s*\w+\s*=\s*<style\b/im.test(fullText)) {
-        throw new Error('style elements cannot be assigned to variables');
-    }
-
-    this.computedCode = [];
-
-    const isComponent = this.target === 'component';
-    if (isComponent) {
-        this.parentStack = ['root'];
-        this.elementCounter = 0;
-    }
-    
-    if (this.target === 'node' && this.containsFetch(ctx))
-        this.inAsyncWrapper = true;
-
-    const emittedLines = [];
-    const componentVars = [];
-    const componentFns = [];
-    let rootElement = null;
-
-    // Special handling for style tags at the top level in components
-    if (isComponent && fullText.includes('<style>')) {
-        // Extract style content manually from the full text
-        const styleMatch = fullText.match(/<style>([\s\S]*?)<\/style>/);
-        if (styleMatch) {
-            const styleContent = styleMatch[1].trim();
-            const styleElName = `el${this.elementCounter++}`;
-
-            const styleCode = `const ${styleElName} = document.createElement('style');\n` +
-                `${styleElName}.textContent = \`${styleContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;\n` +
-                `document.head.appendChild(${styleElName});\n`;
-
-            emittedLines.push(styleCode);
-
-            // Process remaining children, skipping broken style nodes
-            for (const child of ctx.children ?? []) {
-                const childText = child.getText ? child.getText() : '';
-
-                // Skip the broken style-related parse nodes
-                if (childText.includes('style>') || childText.includes('.redText') ||
-                    childText.includes('color:') || childText.includes('red;}') ||
-                    childText === '{' || childText === '}' || childText === '<' ||
-                    childText === '</' || childText === ':' ||
-                    childText.includes('<missing')) {
-                    continue;
-                }
-
-                // Look for the actual HTML content
-                if (childText.includes('<div>') ||
-                    (child.constructor.name === 'ProgramElementContext' &&
-                        child.htmlElement && child.htmlElement())) {
-
-                    const currentElName = `el${this.elementCounter}`;
-                    const code = this.visit(child);
-                    if (code) {
-                        emittedLines.push(code);
-                        if (!rootElement) {
-                            rootElement = currentElName;
-                        }
-                    }
-                    continue;
-                }
-
-                // Process other valid children
-                if (child.symbol?.type === antlr4.Token.EOF ||
-                    child.constructor.name === 'ErrorNodeImpl') continue;
-
-                if (child.constructor.name === 'ProgramElementContext') {
-                    if (child.line && child.line()) {
-                        const stmt = child.line().statement?.();
-                        if (!stmt) continue;
-
-                        if (stmt.simpleStatement?.()?.assignment?.()) {
-                            const code = this.visit(stmt);
-                            if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                            continue;
-                        }
-
-                        if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-                            const code = this.visit(stmt.compoundStatement().functionDefinition());
-                            if (code.trim()) componentFns.push(code);
-                            continue;
-                        }
-                    }
-                }
-            }
+    visitProgram(ctx) {
+        const isComponent = this.target === 'component';
+        if (isComponent) {
+            this.parentStack = ['root'];
+            this.elementCounter = 0;
         }
-    } else {
-        // Normal processing for non-style content
+
+        if (this.target === 'node' && this.containsFetch(ctx)) {
+            this.inAsyncWrapper = true;
+        }
+
+        // These arrays store the different parts of the component
+        const emittedLines = [];   // Code that generates the DOM, goes into _render()
+        const componentVars = [];  // Variable/object declarations (`let x = ...`)
+        const componentFns = [];   // Function declarations
+        this.computedCode = [];    // Reactive computations (`tarisa: ...`)
+        let rootElement = null;
+
+        // ========================================================================
+        // 1. MAIN PROCESSING LOOP
+        // This revised loop explicitly categorizes each top-level program element.
+        // ========================================================================
         for (const child of ctx.children ?? []) {
-            if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') continue;
+            if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') {
+                continue;
+            }
+
+            let handled = false;
 
             if (isComponent && child.constructor.name === 'ProgramElementContext') {
-                if (child.reactiveBlock && child.reactiveBlock()) {
-                    this.visit(child.reactiveBlock());
-                    continue;
-                }
+                const line = child.line?.();
+                const stmt = line?.statement?.();
 
-                if (child.htmlElement && child.htmlElement()) {
-                    const currentElName = `el${this.elementCounter}`;
-                    const htmlElCtx = child.htmlElement();
+                // Case A: It's a statement line (not HTML)
+                if (stmt) {
+                    const simpleStmt = stmt.simpleStatement?.();
+                    const compoundStmt = stmt.compoundStatement?.();
 
-                    if (!htmlElCtx.tagName || typeof htmlElCtx.tagName !== 'function') {
-                        continue;
+                    // Check if it's an assignment (either explicit or as an expression)
+                    let isAssignment = false;
+                    if (simpleStmt?.assignment?.()) {
+                        isAssignment = true;
+                    } else if (simpleStmt?.expression?.()) {
+                        // Check if the expression contains an assignment operator
+                        const exprText = line.getText();
+                        // Look for = but not ==, !=, <=, >=, =>
+                        isAssignment = /^[^=!<>]*=[^=>]/.test(exprText) && !exprText.includes('=>');
                     }
-                    const tagName = htmlElCtx.tagName(0).getText().toLowerCase();
 
-                    const code = this.visit(child.htmlElement());
-                    if (code) emittedLines.push(code);
-
-                    if (!rootElement && tagName !== 'style') {
-                        rootElement = currentElName;
-                    }
-                    continue;
-                }
-
-                if (child.line && child.line()) {
-                    const stmt = child.line().statement?.();
-                    if (!stmt) continue;
-
-                    if (stmt.simpleStatement?.()?.assignment?.()) {
+                    // A1: Is it a variable/object declaration?
+                    if (isAssignment || simpleStmt?.linearObjectDefinition?.()) {
                         const code = this.visit(stmt);
-                        if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                        continue;
+                        if (code.trim()) {
+                            // Remove trailing semicolon to avoid double semicolons
+                            const cleanCode = code.trim().replace(/;+$/, '');
+                            componentVars.push(cleanCode);
+                        }
+                        handled = true;
                     }
-
-                    if (stmt.simpleStatement?.()?.linearObjectDefinition?.()) {
-                        const code = this.visit(stmt);
-                        if (code.trim()) componentVars.push(code.replace(/;$/, ''));
-                        continue;
-                    }
-
-                    if (stmt.compoundStatement?.()?.functionDefinition?.()) {
-                        const code = this.visit(stmt.compoundStatement().functionDefinition());
+                    // A2: Is it a function declaration?
+                    else if (compoundStmt?.functionDefinition?.()) {
+                        const code = this.visit(compoundStmt.functionDefinition());
                         if (code.trim()) componentFns.push(code);
-                        continue;
+                        handled = true;
                     }
+                    // A3: Is it a reactive one-liner?
+                    else if (simpleStmt?.reactiveOneLiner?.()) {
+                        this.visit(simpleStmt); // Populates this.computedCode
+                        handled = true;
+                    }
+                }
+                // Case B: It's a reactive block
+                else if (child.reactiveBlock?.()) {
+                    this.visit(child.reactiveBlock()); // Populates this.computedCode
+                    handled = true;
+                }
+                // Case C: It's just a blank line
+                else if (line && !stmt) {
+                    handled = true; // Ignore blank lines
                 }
             }
 
-            const code = this.visit(child);
-            if (code) emittedLines.push(code);
+            // If the child was a declaration (handled = true), we skip it.
+            // If it was not handled, it must be UI content (e.g., an htmlElement)
+            // or we are not in component mode.
+            if (!handled) {
+                const code = this.visit(child);
+                if (code) {
+                    emittedLines.push(code);
+
+                    // If this is the first root-level HTML element, mark it.
+                    if (isComponent && !rootElement && child.htmlElement?.()) {
+                        const tagName = child.htmlElement().tagName(0).getText().toLowerCase();
+                        if (tagName !== 'style') {
+                            rootElement = `el${this.elementCounter - 1}`;
+                        }
+                    }
+                }
+            }
         }
-    }
+        // ========================================================================
+        // END OF PROCESSING LOOP
+        // ========================================================================
 
-    const bodyCode = emittedLines.filter(Boolean).join('\n');
+        const bodyCode = emittedLines.filter(Boolean).join('\n');
 
-    /* ========== HELPER FUNCTIONS - ONLY FOR COMPONENTS ========== */
-    const helpers = isComponent ? `
+        /* ========== 2. HELPER FUNCTIONS (for components) ========== */
+        const helpers = isComponent ? `
 function $$createText(data){
     if (data && data.nodeType) return data;
     return document.createTextNode(data);
@@ -787,120 +372,59 @@ function $$setAttribute(n,a,v){
     if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
     else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
     else{n.setAttribute(a,v);}
-}
-const _effects = [];
-function _runEffects(){ for(const f of _effects) f();}` : '';
+}` : '';
 
-    /* ========== COMPONENT OUTPUT ========== */
-    if (isComponent) {
-        let importStatements = '';
-    if (this.componentImports && this.componentImports.size > 0) {
-        for (const [path, symbols] of this.componentImports) {
-            let importPath = path;
-            
-            // Check if it's an external URL
-            const isExternalURL = path.match(/^https?:\/\//) || path.match(/^[a-z]+:\/\//);
-            
-            if (isExternalURL) {
-                importPath = path;
-            } else if (!path.includes('/') && !path.includes('.')) {
-                importPath = `./${path}.js`;
-            } else if (path.endsWith('.shonax')) {
-                importPath = path.replace(/\.shonax$/, '.js');
-            } else if (path.endsWith('.shona')) {
-                importPath = path.replace(/\.shona$/, '.js');
-            } else if (!path.endsWith('.js') && !path.match(/^https?:\/\//)) {
-                importPath = `${path}.js`;
+        /* ========== 3. COMPONENT OUTPUT ASSEMBLY ========== */
+        if (isComponent) {
+            let importStatements = '';
+    if (this.componentImports.size > 0) {
+        for (const [path, imports] of this.componentImports) {
+            // Clean the path of quotes for uniform processing
+            let importPath = path.replace(/["']/g, '');
+
+            // Determine if the path is a local file or a bare module/URL
+            const isLocalFile = importPath.endsWith('.shonax') || importPath.endsWith('.shona');
+
+            if (isLocalFile) {
+                // It's a local file. Ensure it's treated as a relative path and has a .js extension.
+                if (!importPath.startsWith('./')) {
+                    importPath = './' + importPath;
+                }
+                importPath = importPath.replace(/\.shonax?$/, '.js');
             }
-            
-            const symbolsList = Array.from(symbols);
-            
-            // Check if the source is a .shona file by looking for it in the files
-            // This is a better way to determine if it's a utility module
-            let isUtilityModule = false;
-            if (!isExternalURL) {
-                // Check if there's a corresponding .shona file
-                // The path might be just "parent" but the file is "parent.shona"
-                const possibleShonaFiles = [
-                    `${path}.shona`,
-                    `${path}`,
-                    path.replace('.js', '.shona')
-                ];
-                
-                // You'll need to pass the files to the visitor or check in another way
-                // For now, we'll use heuristics
-                isUtilityModule = (
-                    path === 'example' || 
-                    path === 'utils' ||
-                    path === 'parent' ||  // Add common utility names
-                    path.endsWith('.shona') || 
-                    (!path.match(/^[A-Z]/) && !path.includes('Component') && !path.includes('/'))
-                );
+            // ELSE: It's a bare module specifier ("react") or a full URL. We leave it untouched.
+            // The bundler or browser's module loader is responsible for resolving these.
+
+            const parts = [];
+            if (imports.default) {
+                parts.push(imports.default);
             }
-            
-            if (isExternalURL) {
-                // External URLs are default exports
-                symbolsList.forEach(symbol => {
-                    importStatements += `import ${symbol} from '${importPath}';\n`;
-                });
-            } else if (isUtilityModule) {
-                // For utility modules (.shona files), import the entire module then destructure
-                const moduleVar = `${path}Module`;
-                importStatements += `import * as ${moduleVar} from '${importPath}';\n`;
-                symbolsList.forEach(symbol => {
-                    importStatements += `const ${symbol} = ${moduleVar}.${symbol};\n`;
-                });
-            } else {
-                // Components - use default imports
-                symbolsList.forEach(symbol => {
-                    importStatements += `import ${symbol} from '${importPath}';\n`;
-                });
+            if (imports.named.size > 0) {
+                const namedList = [...imports.named].sort().join(', ');
+                parts.push(`{ ${namedList} }`);
             }
-        }
-        if (importStatements) {
-            importStatements += '\n';
+
+            if (parts.length > 0) {
+                importStatements += `import ${parts.join(', ')} from '${importPath}';\n`;
+            }
         }
     }
+            if (importStatements) importStatements += '\n';
 
-        const hasIntervals = bodyCode.includes('setInterval(');
-        const hasTimeouts = bodyCode.includes('setTimeout(');
-        
-        let setupCode = '';
-        let renderBodyCode = bodyCode;
-        
-        if (hasIntervals || hasTimeouts) {
-            const lines = bodyCode.split('\n');
-            const setupLines = [];
-            const renderLines = [];
-            
-            for (const line of lines) {
-                if (line.trim().includes('setInterval(') || line.trim().includes('setTimeout(')) {
-                    setupLines.push(line);
-                } else {
-                    renderLines.push(line);
-                }
-            }
-            
-            setupCode = setupLines.join('\n');
-            renderBodyCode = renderLines.join('\n');
-        }
+            const destructure = this.componentProps.length
+                ? `const { ${this.componentProps.join(', ')} } = props;`
+                : '';
+            const varDecls = componentVars.length
+                ? componentVars.map(l => '    ' + l + ';').join('\n')
+                : '';
+            const fnDecls = componentFns.length
+                ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
+                : '';
+            const needsZvanyorwa = bodyCode.includes('zvanyorwa') || varDecls.includes('zvanyorwa');
+            const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
+            const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
 
-        const destructure = this.componentProps.length
-            ? `const { ${this.componentProps.join(', ')} } = props;`
-            : '';
-        const varDecls = componentVars.length
-            ? componentVars.map(l => '    ' + l + ';').join('\n')
-            : '';
-        const fnDecls = componentFns.length
-            ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
-            : '';
-
-        const needsZvanyorwa = bodyCode.includes('zvanyorwa');
-        const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
-
-        const indentedBody = renderBodyCode.split('\n').map(l => '        ' + l).join('\n');
-
-        return `${importStatements}${helpers}
+            return `${importStatements}${helpers}
 
 export default function ${this.componentName}(props = {}) {
     const root = document.createElement('div');
@@ -923,7 +447,6 @@ ${this.computedCode.map(line => '        ' + line).join('\n')}
         const caretEnd   = activeElem?.selectionEnd   ?? null;
 
         _runComputations();
-
         root.innerHTML = '';
 ${indentedBody}
 
@@ -946,50 +469,81 @@ ${indentedBody}
     }
 
     _render(); // Initial render call.
-    
-    // Set up intervals and timeouts after initial render
-${setupCode}
 
     return root;
 }`;
-    }
-
-    /* ========== REGULAR SCRIPT OUTPUT (Browser/Node) ========== */
-    const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
-    
-    if (this.target === 'node') {
-        // Node.js module
-        let header = '';
-        for (const [mod, symbols] of this.imports)
-            header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
-        if (this.imports.size) header += '\n';
-        if (this.promptInjected) header +=
-            'import promptSync from "prompt-sync";\n' +
-            'const prompt = promptSync({ sigint: true });\n\n';
-        
-        if (this.inAsyncWrapper && globals.length)
-            header += `let ${globals.join(', ')};\n\n`;
-
-        if (this.inAsyncWrapper) {
-            const wrapper = `(async () => {\n${bodyCode}\n})();\n`;
-            const exports = globals.length ? `export { ${globals.join(', ')} };\n` : '';
-            return header + wrapper + exports;
         }
 
-        if (globals.length)
-            header += `export { ${globals.join(', ')} };\n\n`;
+        /* ========== 4. REGULAR SCRIPT OUTPUT (Browser/Node) ========== */
+        const globals = [...this.scopeStack[0].keys()].filter(n => !n.startsWith('_'));
 
-        return header + bodyCode;
-    } else {
-        // Browser script - NO helpers, NO IIFE wrapper for regular scripts
-        if (this.inAsyncWrapper) {
-            return `(async () => {\n${bodyCode}\n})();`;
+        if (this.target === 'node') {
+            let header = '';
+            for (const [mod, symbols] of this.imports)
+                header += `import { ${[...symbols].sort().join(', ')} } from "./${mod}.js";\n`;
+            if (this.imports.size) header += '\n';
+            if (this.promptInjected) header +=
+                'import promptSync from "prompt-sync";\n' +
+                'const prompt = promptSync({ sigint: true });\n\n';
+
+            if (this.inAsyncWrapper && globals.length)
+                header += `let ${globals.join(', ')};\n\n`;
+
+            if (this.inAsyncWrapper) {
+                const wrapper = `(async () => {\n${bodyCode}\n})();\n`;
+                const exports = globals.length ? `export { ${globals.join(', ')} };\n` : '';
+                return header + wrapper + exports;
+            }
+
+            if (globals.length)
+                header += `export { ${globals.join(', ')} };\n\n`;
+
+            return header + bodyCode;
+        } else { // Browser Script
+            if (this.inAsyncWrapper) {
+                return `(async () => {\n${bodyCode}\n})();`;
+            }
+            return bodyCode; // No IIFE for plain browser scripts
         }
-        
-        // Just return the plain JavaScript code - no wrapper!
-        return bodyCode;
     }
-}
+
+    visitArrowFuncSingleParam(ctx) {
+        const param = ctx.ID().getText();
+        const body = this.visit(ctx.expression());
+
+        // Remove unnecessary parentheses from the body if it's a simple expression
+        let cleanBody = body;
+        if (cleanBody.startsWith('(') && cleanBody.endsWith(')')) {
+            // Check if removing outer parens would be safe
+            const inner = cleanBody.slice(1, -1);
+            // Keep parens only if there's a comma at the top level (would indicate a sequence expression)
+            if (!inner.includes(',') || inner.includes('(')) {
+                cleanBody = inner;
+            }
+        }
+
+        // Single parameter doesn't need parentheses
+        return `${param} => ${cleanBody}`;
+    }
+
+    visitArrowFuncMultiParam(ctx) {
+        const paramString = ctx.parameterList()
+            ? ctx.parameterList().ID().map(id => id.getText()).join(', ')
+            : '';
+        const body = this.visit(ctx.expression());
+
+        // Remove unnecessary parentheses from the body
+        let cleanBody = body;
+        if (cleanBody.startsWith('(') && cleanBody.endsWith(')')) {
+            const inner = cleanBody.slice(1, -1);
+            if (!inner.includes(',') || inner.includes('(')) {
+                cleanBody = inner;
+            }
+        }
+
+        // Multiple parameters or no parameters need parentheses
+        return `(${paramString}) => ${cleanBody}`;
+    }
 
     visitPrimitiveFilter(ctx) {
         // Add null check
@@ -1024,7 +578,7 @@ ${setupCode}
         // Remove all occurrences of the specific value
         return `${varName} = ${varName}.filter(x => x !== ${value})`;
     }
- 
+
 
     visitProgramElement(ctx) {
 
@@ -1149,39 +703,51 @@ ${setupCode}
     =            ASSIGNMENTS & OPERATIONS         =
     ============================================= */
 
+
     visitAssignment(ctx) {
-        /* ---- guard <style> mis-use  (keep your existing checks) ---- */
+        /* ---- Guard against <style> misuse ---- */
         if (ctx.getText().includes('<style'))
             throw Error("<style> elements cannot be assigned to variables – they must stay at the top level of the component.");
 
         if (
             ctx.expression &&
-            ctx.expression().htmlElement &&
-            ctx.expression().htmlElement()
+            ctx.expression().primaryExpression &&
+            ctx.expression().primaryExpression().htmlElement
         ) {
-            const tag = ctx.expression().htmlElement().tagName(0).getText().toLowerCase();
-            if (tag === 'style')
-                throw Error("<style> elements cannot be assigned to variables – they must stay at the top level of the component.");
+            const htmlElement = ctx.expression().primaryExpression().htmlElement();
+            if (htmlElement) {
+                const tag = htmlElement.tagName(0).getText().toLowerCase();
+                if (tag === 'style')
+                    throw Error("<style> elements cannot be assigned to variables – they must stay at the top level of the component.");
+            }
         }
 
-        /* ---- build the left-hand side string ---------------------- */
+        /* ---- Build the left-hand side string ---- */
         const lhsString = this._getAssignableString(ctx.assignable());
 
-        /* ---- auto-declare bare identifiers ------------------------ */
+        /* ---- Auto-declare bare identifiers ---- */
         let decl = '';
         const isBareId = /^[a-zA-Z_]\w*$/.test(lhsString);
 
         if (isBareId && !this.isDeclared(lhsString)) {
-            decl = (this.inAsyncWrapper && this.scopeStack.length === 1) ? '' : 'let ';
+            // In an async node script, top-level lets are handled differently
+            if (this.inAsyncWrapper && this.scopeStack.length === 1 && this.target === 'node') {
+                decl = '';
+            } else {
+                decl = 'let ';
+            }
             this.declare(lhsString);
         }
 
-        /* ---- right side & emit ------------------------------------ */
+        /* ---- Visit the right-hand side expression ---- */
+        // With the corrected grammar, this now correctly visits the entire
+        // chained expression (e.g., "moment().format('dddd')") as a single unit.
         const rhs = this.visit(ctx.expression());
 
-        console.log(`Assignment: ${lhsString} = ${rhs}`);
+        /* ---- Return the complete assignment statement ---- */
         return `${decl}${lhsString} = ${rhs}`;
     }
+
     visitIncrementStatement(ctx) {
         const lhs = this._getAssignableString(ctx.assignable());
         return `${lhs}++`;
@@ -1240,36 +806,23 @@ ${setupCode}
     }
 
 
-    // visitInputStatement(ctx) {
-    //     const name = ctx.ID().getText();
-    //     const q = ctx.STRING().getText();
-    //     const decl = this.isDeclared(name) ? '' : 'let ';
-
-    //     if (!this.isDeclared(name)) this.declare(name);
-
-    //     if (this.target === 'browser') {
-    //         return `${decl}${name} = prompt(${q});`;
-    //     }
-    //     this.promptInjected = true;
-    //     return `${decl}${name} = prompt(${q} + " ");`;
-    // }
 
     visitInputStatement(ctx) {
-    const name = ctx.ID().getText();
-    const q = ctx.STRING().getText();
-    const decl = this.isDeclared(name) ? '' : 'let ';
+        const name = ctx.ID().getText();
+        const q = ctx.STRING().getText();
+        const decl = this.isDeclared(name) ? '' : 'let ';
 
-    if (!this.isDeclared(name)) this.declare(name);
+        if (!this.isDeclared(name)) this.declare(name);
 
-    // For browser target, use built-in prompt
-    if (this.target === 'browser' || this.target === 'component') {
-        return `${decl}${name} = prompt(${q});`;
+        // For browser target, use built-in prompt
+        if (this.target === 'browser' || this.target === 'component') {
+            return `${decl}${name} = prompt(${q});`;
+        }
+
+        // For Node.js, use prompt-sync
+        this.promptInjected = true;
+        return `${decl}${name} = prompt(${q} + " ");`;
     }
-    
-    // For Node.js, use prompt-sync
-    this.promptInjected = true;
-    return `${decl}${name} = prompt(${q} + " ");`;
-}
 
     visitInputExpr(ctx) {
         const q = ctx.STRING().getText();
@@ -1575,71 +1128,71 @@ ${setupCode}
         const elName = `el${this.elementCounter++}`;
         const rawTag = ctx.tagName(0).getText();
         const tagName = rawTag.toLowerCase();
-         const isCustom = /^[A-Z]/.test(rawTag);  // ADD THIS LINE
+        const isCustom = /^[A-Z]/.test(rawTag);  // ADD THIS LINE
         const inExpr = ctx.parentCtx &&
             ctx.parentCtx.constructor.name === 'HtmlExprContext';
 
 
-             if (isCustom) {  // ADD THIS BLOCK
-        const kvPairs = [];
-        
-        // Process attributes as props
-        for (const a of ctx.attribute() || []) {
-            const key = a.attrName
-                ? a.attrName().getText()
-                : a.getChild(0).getText();
-                
-            const val = a.STRING()
-                ? a.STRING().getText()
-                : this.visit(a.shonaExpression());
-                
-            kvPairs.push(`${key}: ${val}`);
-        }
-        
-        // Process children
-        let childrenCode = '';
-        if (ctx.htmlContent()) {
-            this.parentStack.push(elName);
-            this.tagStack.push(tagName);
-            
-            // Temporarily change parent to collect children
-            const tempParent = `_children${this.elementCounter}`;
-            const oldParent = this.parentStack[this.parentStack.length - 1];
-            this.parentStack[this.parentStack.length - 1] = tempParent;
-            
-            const childContent = this.visit(ctx.htmlContent());
-            
-            // Restore parent
-            this.parentStack[this.parentStack.length - 1] = oldParent;
-            
-            this.parentStack.pop();
-            this.tagStack.pop();
-            
-            if (childContent && childContent.trim()) {
-                // Wrap children collection
-                childrenCode = `const ${tempParent} = [];\n${childContent}\n`;
-                kvPairs.push(`children: ${tempParent}`);
+        if (isCustom) {  // ADD THIS BLOCK
+            const kvPairs = [];
+
+            // Process attributes as props
+            for (const a of ctx.attribute() || []) {
+                const key = a.attrName
+                    ? a.attrName().getText()
+                    : a.getChild(0).getText();
+
+                const val = a.STRING()
+                    ? a.STRING().getText()
+                    : this.visit(a.shonaExpression());
+
+                kvPairs.push(`${key}: ${val}`);
             }
-        }
-        
-        const call = `${rawTag}({ ${kvPairs.join(', ')} })`;
-        const parent = this.parentStack.at(-1);
-        
-        if (inExpr) {
-            return `(() => {\n${childrenCode}    return ${call};\n})()`;
-        } else {
-            let code = childrenCode;
-            if (parent && parent !== 'root') {
-                code += `${parent}.appendChild(${call});\n`;
-            } else {
-                code += `const ${elName} = ${call};\n`;
-                if (parent === 'root') {
-                    code += `root.appendChild(${elName});\n`;
+
+            // Process children
+            let childrenCode = '';
+            if (ctx.htmlContent()) {
+                this.parentStack.push(elName);
+                this.tagStack.push(tagName);
+
+                // Temporarily change parent to collect children
+                const tempParent = `_children${this.elementCounter}`;
+                const oldParent = this.parentStack[this.parentStack.length - 1];
+                this.parentStack[this.parentStack.length - 1] = tempParent;
+
+                const childContent = this.visit(ctx.htmlContent());
+
+                // Restore parent
+                this.parentStack[this.parentStack.length - 1] = oldParent;
+
+                this.parentStack.pop();
+                this.tagStack.pop();
+
+                if (childContent && childContent.trim()) {
+                    // Wrap children collection
+                    childrenCode = `const ${tempParent} = [];\n${childContent}\n`;
+                    kvPairs.push(`children: ${tempParent}`);
                 }
             }
-            return code;
+
+            const call = `${rawTag}({ ${kvPairs.join(', ')} })`;
+            const parent = this.parentStack.at(-1);
+
+            if (inExpr) {
+                return `(() => {\n${childrenCode}    return ${call};\n})()`;
+            } else {
+                let code = childrenCode;
+                if (parent && parent !== 'root') {
+                    code += `${parent}.appendChild(${call});\n`;
+                } else {
+                    code += `const ${elName} = ${call};\n`;
+                    if (parent === 'root') {
+                        code += `root.appendChild(${elName});\n`;
+                    }
+                }
+                return code;
+            }
         }
-    }
 
         /* ---------- where to append ---------- */
         const inComponent = this.target === 'component';
@@ -1941,7 +1494,7 @@ ${setupCode}
                         const nextText = inputStream.getText(start, stop);
 
                         // Don't add space if text starts with space or punctuation
-                       const punctuation = /^[\s,;:.!?)`}\]]/;
+                        const punctuation = /^[\s,;:.!?)`}\]]/;
 
                         if (nextText && !nextText.match(punctuation)) {
                             const parent = this.parentStack.at(-1);
@@ -2021,58 +1574,58 @@ ${setupCode}
     }
 
 
-visitHtmlContentElement(ctx) {
-    // 1. Control flow ONLY from inside {}
-    if (ctx.shonaControlFlow && ctx.shonaControlFlow()) {
-        return this.visit(ctx.shonaControlFlow());
-    }
-    
-    // 2. Expression inside {}
-    if (ctx.shonaExpression && ctx.shonaExpression()) {
-        const expr = this.visit(ctx.shonaExpression().expression());
-        const parent = this.parentStack.at(-1);
-        return `${parent}.appendChild($$createText(${expr}));`;
-    }
-    
-    // 3. Nested HTML element
-    if (ctx.htmlElement && ctx.htmlElement()) {
-        return this.visit(ctx.htmlElement());
-    }
-    
-    // 4. Whitespace
-    if (ctx.WS_IN_HTML && ctx.WS_IN_HTML()) {
-        const parent = this.parentStack.at(-1);
-        return `${parent}.appendChild($$createText(' '));`;
-    }
-    
-    // 5. HTML text - get the complete text with spaces
-    if (ctx.htmlText && ctx.htmlText()) {
-        // Use the visitor to get the properly reconstructed text
-        const text = this.visit(ctx.htmlText());
-        
-        if (text) {
-            const parent = this.parentStack.at(-1);
-            const escaped = text
-                .replace(/\\/g, '\\\\')
-                .replace(/`/g, '\\`')
-                .replace(/\$/g, '\\$');
-            
-            return `${parent}.appendChild($$createText(\`${escaped}\`));`;
+    visitHtmlContentElement(ctx) {
+        // 1. Control flow ONLY from inside {}
+        if (ctx.shonaControlFlow && ctx.shonaControlFlow()) {
+            return this.visit(ctx.shonaControlFlow());
         }
-    }
-    
-    return '';
-}
 
-visitHtmlText(ctx) {
-    // Get the full text span including spaces
-    const start = ctx.start.start;
-    const stop = ctx.stop.stop;
-    const inputStream = ctx.start.getInputStream();
-    const fullText = inputStream.getText(start, stop);
-    
-    return fullText;
-}
+        // 2. Expression inside {}
+        if (ctx.shonaExpression && ctx.shonaExpression()) {
+            const expr = this.visit(ctx.shonaExpression().expression());
+            const parent = this.parentStack.at(-1);
+            return `${parent}.appendChild($$createText(${expr}));`;
+        }
+
+        // 3. Nested HTML element
+        if (ctx.htmlElement && ctx.htmlElement()) {
+            return this.visit(ctx.htmlElement());
+        }
+
+        // 4. Whitespace
+        if (ctx.WS_IN_HTML && ctx.WS_IN_HTML()) {
+            const parent = this.parentStack.at(-1);
+            return `${parent}.appendChild($$createText(' '));`;
+        }
+
+        // 5. HTML text - get the complete text with spaces
+        if (ctx.htmlText && ctx.htmlText()) {
+            // Use the visitor to get the properly reconstructed text
+            const text = this.visit(ctx.htmlText());
+
+            if (text) {
+                const parent = this.parentStack.at(-1);
+                const escaped = text
+                    .replace(/\\/g, '\\\\')
+                    .replace(/`/g, '\\`')
+                    .replace(/\$/g, '\\$');
+
+                return `${parent}.appendChild($$createText(\`${escaped}\`));`;
+            }
+        }
+
+        return '';
+    }
+
+    visitHtmlText(ctx) {
+        // Get the full text span including spaces
+        const start = ctx.start.start;
+        const stop = ctx.stop.stop;
+        const inputStream = ctx.start.getInputStream();
+        const fullText = inputStream.getText(start, stop);
+
+        return fullText;
+    }
 
     visitShonaControlFlow(ctx) {
         // The control flow statement is inside the braces
@@ -2639,79 +2192,65 @@ visitHtmlText(ctx) {
     =            IMPORTS & NETWORKING             =
     ============================================= */
 
-// visitImportStatement(ctx) {
-//     // ---------- symbols ----------
-//     const symbolTokens = ctx.idList().ID();
-//     const symbols      = symbolTokens.map(t => t.getText());
-
-//     // ---------- module path ----------
-//     let modulePath;
-//     if (ctx.modulePath().ID()) {
-//         modulePath = ctx.modulePath().ID().getText();        // example   | utils/math
-//     } else {
-//         modulePath = ctx.modulePath().STRING().getText()
-//                                .replace(/^["']|["']$/g, ''); // "example" → example
-//     }
-
-//     /* ============ COMPONENT TARGET ============ */
-//     if (this.target === 'component') {
-//         if (!this.componentImports.has(modulePath))
-//             this.componentImports.set(modulePath, new Set());
-//         symbols.forEach(s => this.componentImports.get(modulePath).add(s));
-//         return '';                 // real import emitted later in header
-//     }
-
-//     /* ============ NODE TARGET ============ */
-//     if (this.target === 'node') {
-//         if (!this.imports.has(modulePath))
-//             this.imports.set(modulePath, new Set());
-//         symbols.forEach(s => this.imports.get(modulePath).add(s));
-//         return '';
-//     }
-
-//     /* ============ BROWSER (non-component) ============ */
-//     console.warn(`Warning: 'tora ... kubva mu' ignored in browser target.`);
-//     return `// import of ${symbols.join(', ')} ignored in browser target`;
-// }
-
-visitImportStatement(ctx) {
-    const symbolTokens = ctx.idList().ID();
-    const symbols = symbolTokens.map(t => t.getText());
-
-    let modulePath;
-    if (ctx.modulePath().ID()) {
-        modulePath = ctx.modulePath().ID().getText();
-    } else {
-        modulePath = ctx.modulePath().STRING().getText()
-                               .replace(/^["']|["']$/g, '');
+    visitDefaultAndNamedImport(ctx) {
+        const defaultImport = ctx.ID().getText();
+        const namedImports = new Set();
+        if (ctx.idList()) {
+            ctx.idList().ID().forEach(id => namedImports.add(id.getText()));
+        }
+        return { default: defaultImport, named: namedImports };
     }
 
-    /* ============ COMPONENT TARGET ============ */
-    if (this.target === 'component') {
-        if (!this.componentImports.has(modulePath))
-            this.componentImports.set(modulePath, new Set());
-        symbols.forEach(s => this.componentImports.get(modulePath).add(s));
-        return '';
+    visitNamedOnlyImport(ctx) {
+        const namedImports = new Set();
+        ctx.idList().ID().forEach(id => namedImports.add(id.getText()));
+        return { default: null, named: namedImports };
     }
 
-    /* ============ NODE TARGET ============ */
-    if (this.target === 'node') {
-        if (!this.imports.has(modulePath))
-            this.imports.set(modulePath, new Set());
-        symbols.forEach(s => this.imports.get(modulePath).add(s));
-        return '';
-    }
+    visitImportStatement(ctx) {
+        const modulePath = ctx.modulePath().getText();
 
-    /* ============ BROWSER TARGET ============ */
-    // For browser, generate simpler code without arrow functions
-    const importStatements = symbols.map(symbol => {
-        // Generate a simpler check that won't cause syntax errors
-        return `const ${symbol} = (window.loadModule && window.loadModule('${modulePath}')['${symbol}']) || null;\n` +
-               `if (!${symbol}) throw new Error('Function ${symbol} not found in module ${modulePath}');`;
-    }).join('\n');
-    
-    return importStatements;
-}
+        // Visit the specifier, which will return a structured object like:
+        // { default: 'confetti' | null, named: Set('faker') }
+        const importData = this.visit(ctx.importSpecifier());
+
+        // For components, we collect all imports and generate them at the top.
+        if (this.target === 'component') {
+            // If we haven't seen this module path before, initialize it.
+            if (!this.componentImports.has(modulePath)) {
+                this.componentImports.set(modulePath, { default: null, named: new Set() });
+            }
+
+            // Get the collection of imports for this module path.
+            const existing = this.componentImports.get(modulePath);
+
+            // Merge the newly found imports into the existing collection.
+            if (importData.default) {
+                if (existing.default && existing.default !== importData.default) {
+                    throw new Error(`Cannot import multiple different default members from module "${modulePath}".`);
+                }
+                existing.default = importData.default;
+            }
+
+            importData.named.forEach(name => existing.named.add(name));
+
+            // This statement itself doesn't generate code directly.
+            return '';
+        }
+
+        // --- Fallback for non-component targets (e.g., plain .shona scripts) ---
+        // This logic generates immediate import statements for Node.js or warns for browser.
+        if (this.target === 'node') {
+            const parts = [];
+            if (importData.default) parts.push(importData.default);
+            if (importData.named.size > 0) parts.push(`{ ${[...importData.named].join(', ')} }`);
+
+            return `import ${parts.join(', ')} from "${modulePath.replace(/'/g, '')}";`;
+        }
+
+        console.warn(`Warning: 'tora' statements are ignored in standard browser script target.`);
+        return `// Import from ${modulePath} ignored`;
+    }
 
     visitFetchStatement(ctx) {
         const varName = ctx.ID(0).getText();
@@ -2743,86 +2282,86 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
     =            TIMERS                           =
     ============================================= */
 
- visitIntervalStatement(ctx) {
-    let callbackCode = this.visit(ctx.primaryExpression());
-    if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {           //  "foo()"
-        callbackCode = callbackCode.replace(/\(\s*\)$/, '');    //  -> "foo"
-    }
-    const timeValue = this.visit(ctx.expression());
-    const milliseconds = `(${timeValue}) * 1000`;
-    return `setInterval(${callbackCode}, ${milliseconds})`;
-}
-
-visitTimeoutStatement(ctx) {
-    const callbackExpr = ctx.primaryExpression();
-    let callbackCode = this.visit(callbackExpr);
-    
-    // If the callback is a function call like showMessage(), extract just the function name
-    if (callbackExpr.functionCall && callbackExpr.functionCall()) {
-        const funcName = callbackExpr.functionCall().ID().getText();
-        const args = callbackExpr.functionCall().argumentList();
-        if (!args || !args.expression || args.expression().length === 0) {
-            // No arguments, just use the function name
-            callbackCode = funcName;
+    visitIntervalStatement(ctx) {
+        let callbackCode = this.visit(ctx.primaryExpression());
+        if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {           //  "foo()"
+            callbackCode = callbackCode.replace(/\(\s*\)$/, '');    //  -> "foo"
         }
-    } else {
-        // Fallback to regex approach
-        if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
-            callbackCode = callbackCode.replace(/\(\s*\)$/, '');
-        }
-    }
-    
-    const timeValue = this.visit(ctx.expression());
-    const milliseconds = `(${timeValue}) * 1000`;
-    return `setTimeout(${callbackCode}, ${milliseconds})`;
-}
-
-visitIntervalExpr(ctx) {
-    const callbackExpr = ctx.primaryExpression();
-    let callbackCode = this.visit(callbackExpr);
-
-    // If the callback is a function call like showMessage(), extract just the function name
-    if (callbackExpr.functionCall && callbackExpr.functionCall()) {
-        const funcName = callbackExpr.functionCall().ID().getText();
-        const args = callbackExpr.functionCall().argumentList();
-        if (!args || !args.expression || args.expression().length === 0) {
-            // No arguments, just use the function name
-            callbackCode = funcName;
-        }
-    } else {
-        // Fallback to regex approach
-        if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
-            callbackCode = callbackCode.replace(/\(\s*\)$/, '');
-        }
+        const timeValue = this.visit(ctx.expression());
+        const milliseconds = `(${timeValue}) * 1000`;
+        return `setInterval(${callbackCode}, ${milliseconds})`;
     }
 
-    const timeValue = this.visit(ctx.expression());
-    const milliseconds = `(${timeValue}) * 1000`;
-    return `setInterval(${callbackCode}, ${milliseconds})`;
-}
-visitTimeoutExpr(ctx) {
-    const callbackExpr = ctx.primaryExpression();
-    let callbackCode = this.visit(callbackExpr);
+    visitTimeoutStatement(ctx) {
+        const callbackExpr = ctx.primaryExpression();
+        let callbackCode = this.visit(callbackExpr);
 
-    // If the callback is a function call like showMessage(), extract just the function name
-    if (callbackExpr.functionCall && callbackExpr.functionCall()) {
-        const funcName = callbackExpr.functionCall().ID().getText();
-        const args = callbackExpr.functionCall().argumentList();
-        if (!args || !args.expression || args.expression().length === 0) {
-            // No arguments, just use the function name
-            callbackCode = funcName;
+        // If the callback is a function call like showMessage(), extract just the function name
+        if (callbackExpr.functionCall && callbackExpr.functionCall()) {
+            const funcName = callbackExpr.functionCall().ID().getText();
+            const args = callbackExpr.functionCall().argumentList();
+            if (!args || !args.expression || args.expression().length === 0) {
+                // No arguments, just use the function name
+                callbackCode = funcName;
+            }
+        } else {
+            // Fallback to regex approach
+            if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
+                callbackCode = callbackCode.replace(/\(\s*\)$/, '');
+            }
         }
-    } else {
-        // Fallback to regex approach
-        if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
-            callbackCode = callbackCode.replace(/\(\s*\)$/, '');
-        }
+
+        const timeValue = this.visit(ctx.expression());
+        const milliseconds = `(${timeValue}) * 1000`;
+        return `setTimeout(${callbackCode}, ${milliseconds})`;
     }
 
-    const timeValue = this.visit(ctx.expression());
-    const milliseconds = `(${timeValue}) * 1000`;
-    return `setTimeout(${callbackCode}, ${milliseconds})`;
-}
+    visitIntervalExpr(ctx) {
+        const callbackExpr = ctx.primaryExpression();
+        let callbackCode = this.visit(callbackExpr);
+
+        // If the callback is a function call like showMessage(), extract just the function name
+        if (callbackExpr.functionCall && callbackExpr.functionCall()) {
+            const funcName = callbackExpr.functionCall().ID().getText();
+            const args = callbackExpr.functionCall().argumentList();
+            if (!args || !args.expression || args.expression().length === 0) {
+                // No arguments, just use the function name
+                callbackCode = funcName;
+            }
+        } else {
+            // Fallback to regex approach
+            if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
+                callbackCode = callbackCode.replace(/\(\s*\)$/, '');
+            }
+        }
+
+        const timeValue = this.visit(ctx.expression());
+        const milliseconds = `(${timeValue}) * 1000`;
+        return `setInterval(${callbackCode}, ${milliseconds})`;
+    }
+    visitTimeoutExpr(ctx) {
+        const callbackExpr = ctx.primaryExpression();
+        let callbackCode = this.visit(callbackExpr);
+
+        // If the callback is a function call like showMessage(), extract just the function name
+        if (callbackExpr.functionCall && callbackExpr.functionCall()) {
+            const funcName = callbackExpr.functionCall().ID().getText();
+            const args = callbackExpr.functionCall().argumentList();
+            if (!args || !args.expression || args.expression().length === 0) {
+                // No arguments, just use the function name
+                callbackCode = funcName;
+            }
+        } else {
+            // Fallback to regex approach
+            if (/^\s*\w+\s*\(\s*\)\s*$/.test(callbackCode)) {
+                callbackCode = callbackCode.replace(/\(\s*\)$/, '');
+            }
+        }
+
+        const timeValue = this.visit(ctx.expression());
+        const milliseconds = `(${timeValue}) * 1000`;
+        return `setTimeout(${callbackCode}, ${milliseconds})`;
+    }
 
     /* =============================================
     =            PROPERTIES                       =
@@ -2857,72 +2396,84 @@ visitTimeoutExpr(ctx) {
         return this.visit(ctx.conditionalExpression());
     }
 
-    // visitLogicalOrExpression(ctx) {
-    //     return this._visitBinary(ctx, { kana: '||', or: '||' });
-    // }
 
     visitLogicalOrExpression(ctx) {
-        if (ctx.getChildCount() === 1) {
-            return this.visit(ctx.getChild(0));
+        if (ctx.getChildCount() === 1) return this.visit(ctx.getChild(0));
+
+        let result = this.visit(ctx.logicalAndExpression(0));
+        for (let i = 1; i < ctx.logicalAndExpression().length; i++) {
+            const op = ctx.getChild(i * 2 - 1).getText(); // Gets the operator token
+            let jsOp = '||'; // Default for KANA, OR, etc.
+            result = `(${result} ${jsOp} ${this.visit(ctx.logicalAndExpression(i))})`;
         }
-
-        let result = this.visit(ctx.getChild(0));
-
-        for (let i = 1; i < ctx.getChildCount(); i += 2) {
-            const opNode = ctx.getChild(i);
-            const rightNode = ctx.getChild(i + 1);
-
-            let op = '||'; // Default to OR
-            const opText = opNode.getText();
-
-            // Handle "kana kuti" as a two-token OR operator
-            if (opText === 'kana' && i + 1 < ctx.getChildCount() - 1) {
-                const nextToken = ctx.getChild(i + 1);
-                if (nextToken && nextToken.getText() === 'kuti') {
-                    // Skip the 'kuti' token and get the actual right operand
-                    i++; // Extra increment to skip 'kuti'
-                    const actualRightNode = ctx.getChild(i + 1);
-                    const right = this.visit(actualRightNode);
-                    result = `(${result} || ${right})`;
-                    continue;
-                }
-            }
-
-            const right = this.visit(rightNode);
-            result = `(${result} ${op} ${right})`;
-        }
-
         return result;
     }
 
 
 
-    // visitLogicalAndExpression(ctx) {
-    //     return this._visitBinary(ctx, { uye: '&&', and: '&&' });
-    // }
 
     visitLogicalAndExpression(ctx) {
-        return this._visitBinary(ctx, {
-            uye: '&&',
-            and: '&&',
-            '&&': '&&'
-        });
+        if (ctx.getChildCount() === 1) return this.visit(ctx.getChild(0));
+
+        let result = this.visit(ctx.equalityExpression(0));
+        for (let i = 1; i < ctx.equalityExpression().length; i++) {
+            let jsOp = '&&';
+            result = `(${result} ${jsOp} ${this.visit(ctx.equalityExpression(i))})`;
+        }
+        return result;
     }
 
     visitEqualityExpression(ctx) {
-        return this._visitBinary(ctx);
+        if (ctx.getChildCount() === 1) return this.visit(ctx.getChild(0));
+
+        let result = this.visit(ctx.comparisonExpression(0));
+        for (let i = 1; i < ctx.comparisonExpression().length; i++) {
+            const op = ctx.getChild(i * 2 - 1).getText();
+            result = `(${result} ${op} ${this.visit(ctx.comparisonExpression(i))})`;
+        }
+        return result;
     }
 
     visitComparisonExpression(ctx) {
-        return this._visitBinary(ctx);
+        if (ctx.getChildCount() === 1) return this.visit(ctx.getChild(0));
+
+        let result = this.visit(ctx.additiveExpression(0));
+        for (let i = 1; i < ctx.additiveExpression().length; i++) {
+            const op = ctx.getChild(i * 2 - 1).getText();
+            const right = this.visit(ctx.additiveExpression(i));
+            result = `${result} ${op} ${right}`;  // Don't wrap in parentheses here
+        }
+        return result;  // Return without wrapping
     }
 
     visitAdditiveExpression(ctx) {
-        return this._visitBinary(ctx);
+        // If there is only one child, it's not an addition.
+        if (ctx.multiplicativeExpression().length === 1) {
+            return this.visit(ctx.multiplicativeExpression(0));
+        }
+
+        // Build the expression chain flatly
+        let result = this.visit(ctx.multiplicativeExpression(0));
+        for (let i = 1; i < ctx.multiplicativeExpression().length; i++) {
+            const op = ctx.getChild(i * 2 - 1).getText(); // Gets the '+' or '-' token
+            const rightOperand = this.visit(ctx.multiplicativeExpression(i));
+            result += ` ${op} ${rightOperand}`;
+        }
+
+        // Wrap the entire final result in parentheses for precedence safety.
+        return `(${result})`;
     }
 
     visitMultiplicativeExpression(ctx) {
-        return this._visitBinary(ctx);
+        if (ctx.getChildCount() === 1) return this.visit(ctx.getChild(0));
+
+        let result = this.visit(ctx.powerExpression(0));
+        for (let i = 1; i < ctx.powerExpression().length; i++) {
+            const op = ctx.getChild(i * 2 - 1).getText();
+            const right = this.visit(ctx.powerExpression(i));
+            result = `${result} ${op} ${right}`;  // Don't wrap in parentheses
+        }
+        return `(${result})`;
     }
 
     visitUnaryExpression(ctx) {
@@ -3250,13 +2801,11 @@ visitTimeoutExpr(ctx) {
         return `[...new Set(${expr})]`;
     }
 
+
     visitMethodCall(ctx) {
-        const allIds = ctx.ID().map(id => id.getText());
-        const methodName = allIds[allIds.length - 1];
-        const owners = allIds.slice(0, -1).reverse();
-        const chain = owners.join('.');
+        const obj = this.visit(ctx.primaryExpression());
         const args = ctx.argumentList() ? this.visit(ctx.argumentList()) : "";
-        return `${chain}.${methodName}(${args})`;
+        return `${obj}(${args})`;
     }
 
     visitArgumentList(ctx) {
