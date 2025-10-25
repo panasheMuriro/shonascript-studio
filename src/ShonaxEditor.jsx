@@ -164,6 +164,8 @@ main()`,
     monaco.languages.register({ id: 'shonax' });
     monaco.languages.setMonarchTokensProvider('shonax', ShonaxLanguageDefinition);
     monaco.editor.defineTheme('shonax-dark', ShonaxTheme);
+
+    
     
     // Also register regular Shona language
     monaco.languages.register({ id: 'shona' });
@@ -1607,7 +1609,7 @@ return {
                     <Editor
                       height="calc(100% - 40px)"
                       defaultLanguage="javascript"
-                      theme="vs-dark"
+                      theme="shonax-dark"
                       value={compiledCode}
                       options={{
                         minimap: { enabled: false },
@@ -1654,7 +1656,7 @@ return {
                 onChange={(e) => setEditorTheme(e.target.value)}
               >
                 <option value="shonax-dark">Shonax Dark</option>
-                <option value="vs-dark">VS Dark</option>
+                {/* <option value="vs-dark">VS Dark</option> */}
                 <option value="vs">VS Light</option>
               </select>
             </div>
