@@ -809,6 +809,10 @@ const createPreviewHtmlWithImports = (jsCode, files) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shonax Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -835,10 +839,26 @@ const createPreviewHtmlWithImports = (jsCode, files) => {
             return document.createTextNode(data);
         }
         window.$$listen = function(node,e,h){node.addEventListener(e,h);}
+        
+        // Enhanced setAttribute to handle Lucide icons
         window.$$setAttribute = function(n,a,v){
-            if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
-            else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
-            else{n.setAttribute(a,v);}
+            if(a==='value'||a==='checked'||a==='selected'){
+                n[a]=v;
+            } else if (v === false || v === null || v === undefined) { 
+                n.removeAttribute(a); 
+            } else {
+                n.setAttribute(a,v);
+                
+                // If setting data-lucide attribute, schedule icon initialization
+                if (a === 'data-lucide' && window.lucide) {
+                    // Use a microtask to ensure the element is in the DOM
+                    queueMicrotask(() => {
+                        if (n.isConnected) {
+                            lucide.createIcons({ icons: { nodes: [n] } });
+                        }
+                    });
+                }
+            }
         }
         
         // Load external module from URL
@@ -910,7 +930,7 @@ const createPreviewHtmlWithImports = (jsCode, files) => {
                         transformedCode = transformedCode.replace(imp.fullMatch, replacement);
                     }
                 } else {
-                    // Handle local imports - check if it's a single function or an object
+                    // Handle local imports
                     const moduleName = imp.defaultImport || imp.namespaceImport;
                     const replacement = \`
 const __tempModule_\${moduleName} = window.__localModules['\${imp.modulePath}'] || 
@@ -936,10 +956,8 @@ const \${moduleName} = __tempModule_\${moduleName} && __tempModule_\${moduleName
                     transformedCode += \`\\n; return \${funcMatch[1]};\`;
                 }
             } else if (moduleType === 'module') {
-                // For .shona modules, the code should already have a return statement from wrapShonaModule
-                // Just make sure it's wrapped properly
+                // For .shona modules
                 if (!transformedCode.includes('return {')) {
-                    // If no return statement, assume we need to return an empty object
                     transformedCode += '\\nreturn {};';
                 }
             }
@@ -964,14 +982,8 @@ const \${moduleName} = __tempModule_\${moduleName} && __tempModule_\${moduleName
                         const transformedCode = await transformModuleCode(moduleInfo.code, p, moduleInfo.type);
                         
                         try {
-                            // Create a function that returns the module
-                            // Use Function constructor with 'return' to execute and get the module
                             const moduleFunc = new Function(transformedCode);
                             const result = moduleFunc();
-                            
-                 
-             
-                            
                             moduleCache[p] = result;
                         } catch (error) {
                             console.error('Error loading module', p, error);
@@ -1047,6 +1059,56 @@ const \${moduleName} = __tempModule_\${moduleName} && __tempModule_\${moduleName
         console.warn = function() { sendConsoleMessage('warn', arguments); };
         console.info = function() { sendConsoleMessage('info', arguments); };
 
+        // Initialize Lucide icons with proper timing
+        function initializeLucideIcons() {
+            if (window.lucide) {
+                // Wait a bit to ensure all elements are in the DOM
+                requestAnimationFrame(() => {
+                    lucide.createIcons();
+                });
+            }
+        }
+
+        // Set up MutationObserver for dynamic icon creation
+        function setupIconObserver() {
+            if (!window.lucide) return;
+            
+            const observer = new MutationObserver((mutations) => {
+                let hasNewIcons = false;
+                
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.nodeType === 1) { // Element node
+                                if (node.hasAttribute('data-lucide') || 
+                                    node.querySelector('[data-lucide]')) {
+                                    hasNewIcons = true;
+                                }
+                            }
+                        });
+                    } else if (mutation.type === 'attributes' && 
+                               mutation.attributeName === 'data-lucide') {
+                        hasNewIcons = true;
+                    }
+                });
+                
+                if (hasNewIcons) {
+                    requestAnimationFrame(() => {
+                        lucide.createIcons();
+                    });
+                }
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['data-lucide']
+            });
+            
+            return observer;
+        }
+
         // Execute the main component
         (async function() {
             try {
@@ -1060,6 +1122,12 @@ const \${moduleName} = __tempModule_\${moduleName} && __tempModule_\${moduleName
                     const component = MainComponent();
                     if (component) {
                         document.getElementById('root').appendChild(component);
+                        
+                        // Initialize icons after component is mounted
+                        initializeLucideIcons();
+                        
+                        // Set up observer for future changes
+                        setupIconObserver();
                     } else {
                         console.error('Component returned null or undefined');
                     }
