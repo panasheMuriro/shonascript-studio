@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { 
-  Play, 
   AlertCircle, 
   CheckCircle, 
   FileCode, 
@@ -26,7 +25,7 @@ import {
   Code2
 } from 'lucide-react';
 import FileManager from './FileManager';
-import { ShonaxLanguageDefinition, ShonaxTheme, ShonaxLanguageConfiguration } from './monaco-shonax-language';
+import { ShonaxLanguageDefinition, ShonaxTheme, ShonaxLanguageConfiguration} from './monaco-shonax-language';
 import { compileComponent } from '../shonascript/translator-core-shonax';
 import { translateShona } from '../shonascript/translator-core';
 
@@ -164,7 +163,6 @@ main()`,
     monaco.languages.register({ id: 'shonax' });
     monaco.languages.setMonarchTokensProvider('shonax', ShonaxLanguageDefinition);
     monaco.editor.defineTheme('shonax-dark', ShonaxTheme);
-
     
     
     // Also register regular Shona language
