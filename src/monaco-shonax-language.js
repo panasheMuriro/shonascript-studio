@@ -29,31 +29,45 @@ export const ShonaxLanguageDefinition = {
   tokenizer: {
     root: [
       { include: '@whitespace' },
+
+      // HTML Tags
       [/<\//, { token: 'tag.bracket', next: '@htmlClosingTag' }],
       [/</, { token: 'tag.bracket', next: '@htmlOpeningTag' }],
+      
+      // Shona Expressions
       [/{/, { token: 'delimiter.bracket', next: '@shonaExpression' }],
+      
+      // Rule for Function Calls (must be before general identifier)
+      [/[a-zA-Z_]\w*(?=\s*\()/, {
+        cases: {
+          '@keywords': 'keyword',
+          '@default': 'entity.name.function'
+        }
+      }],
+      
+      // General Identifiers and Keywords
       [/[a-zA-Z_]\w*/, { cases: { '@keywords': 'keyword', '@default': 'identifier' } }],
+      
+      // Other language constructs
       [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
       [/0[xX][0-9a-fA-F]+/, 'number.hex'],
       [/\d+/, 'number'],
       [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
-      
-      // *** THIS LINE IS FIXED ***
-      // It now correctly says bracket: '@open' instead of bracket: 'open'
       [/'/, { token: 'string.quote', bracket: '@open', next: '@stringSingle' }],
-
       [/[{}()\[\]]/, '@brackets'],
       [/@symbols/, { cases: { '@operators': 'operator', '@default': '' } }],
-      [/[<>]/, 'operator'],
+      [/[<>]/, 'operator'], // Fallback for < > operators
     ],
 
+    // State for the content BETWEEN tags
     htmlContent: [
-      [/[^<{]+/, ''],
+      [/[^<{]+/, ''], // Plain text content
       [/<\//, { token: 'tag.bracket', next: '@htmlClosingTag' }],
       [/</, { token: 'tag.bracket', next: '@htmlOpeningTag' }],
       [/{/, { token: 'delimiter.bracket', next: '@shonaExpression' }],
     ],
     
+    // State for an opening tag: <tag attr="value">
     htmlOpeningTag: [
       [/[a-zA-Z][\w\-]*/, 'tag.name'],
       [/\s+/, 'white'],
@@ -65,11 +79,13 @@ export const ShonaxLanguageDefinition = {
       [/>/, { token: 'tag.bracket', next: '@htmlContent' }],
     ],
     
+    // State for a closing tag: </tag>
     htmlClosingTag: [
       [/[a-zA-Z][\w\-]*/, 'tag.name'],
       [/>/, { token: 'tag.bracket', next: '@pop' }], 
     ],
 
+    // Helper states for strings and expressions
     stringInHtml: [
       [/[^\\"]+/, 'string'],
       [/"/, { token: 'string.quote', next: '@pop' }]
@@ -104,7 +120,7 @@ export const ShonaxLanguageDefinition = {
     ]
   }
 };
-// The Theme and LanguageConfiguration remain the same as they were already correct.
+
 export const ShonaxTheme = {
   base: 'vs-dark',
   inherit: true,
@@ -119,7 +135,8 @@ export const ShonaxTheme = {
     { token: 'attribute.name', foreground: '9cdcfe' },
     { token: 'operator', foreground: 'd4d4d4' },
     { token: 'delimiter.bracket', foreground: 'ffd700' },
-    { token: '', foreground: 'ffffff' },
+    { token: 'entity.name.function', foreground: 'DCDCAA' }, // Yellow for functions
+    { token: '', foreground: 'ffffff' }, // Default text (including HTML content)
   ],
   colors: {
     'editor.background': '#1e1e1e',
@@ -131,7 +148,6 @@ export const ShonaxTheme = {
   }
 };
 
-// No changes needed for the language configuration.
 export const ShonaxLanguageConfiguration = {
   comments: {
     lineComment: '//',
@@ -163,7 +179,7 @@ export const ShonaxLanguageConfiguration = {
     {
       beforeText: /^.*:\s*$/,
       action: { 
-        indentAction: 1,
+        indentAction: 1, // IndentAction.Indent
         appendText: '    '
       }
     },
@@ -177,18 +193,18 @@ export const ShonaxLanguageConfiguration = {
     {
       beforeText: /^\s*zvimwe\s*:\s*$/,
       action: {
-        indentAction: 3,
+        indentAction: 3, // IndentAction.Outdent
         outdentCurrentLine: true
       }
     },
     {
       beforeText: new RegExp(`<([_:\\w][_:\\w\\-.\\d]*)([^/>]*(?!/)>)[^<]*$`, 'i'),
       afterText: /^<\/([_:\w][_:\w\-.\d]*)\s*>$/i,
-      action: { indentAction: 2 }
+      action: { indentAction: 2 } // IndentAction.IndentOutdent
     },
     {
       beforeText: new RegExp(`<(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`, 'i'),
-      action: { indentAction: 1 }
+      action: { indentAction: 1 } // IndentAction.Indent
     }
   ],
   autoCloseBefore: ';:.,=}])> \n\t',
