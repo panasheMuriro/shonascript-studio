@@ -5,7 +5,7 @@ import ShonascriptxParser from './build/ShonascriptxParser';
 import CustomShonascriptxVisitor from './CustomShonascriptxVisitor';
 
 export function translateShona(shonascriptCode, options = {}) {
-    try {
+    try { const { target = 'browser' } = options;
         const processor = new IndentationProcessor();
         const processedCode = processor.process(shonascriptCode);
         const chars = new antlr4.InputStream(processedCode);
@@ -14,7 +14,7 @@ export function translateShona(shonascriptCode, options = {}) {
         const parser = new ShonascriptxParser(tokens);
         parser.buildParseTrees = true;
         const tree = parser.program();
-        const visitor = new CustomShonascriptxVisitor(options);
+        const visitor = new CustomShonascriptxVisitor({target: target});
         const jsCode = visitor.visit(tree);
         return jsCode;
     } catch (error) {

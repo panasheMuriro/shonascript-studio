@@ -1,4 +1,4 @@
-# Shonascript Studio 🚀
+# Shonascript Studio 👨🏾‍💻🇿🇼
 
 Welcome to Shonascript Studio, the modern web-based IDE for the Shonascript and Shonax programming languages.
 

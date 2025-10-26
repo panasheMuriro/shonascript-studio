@@ -414,6 +414,18 @@ export default class ShonascriptxVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by ShonascriptxParser#defaultAndNamedImport.
+	visitDefaultAndNamedImport(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by ShonascriptxParser#namedOnlyImport.
+	visitNamedOnlyImport(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by ShonascriptxParser#idList.
 	visitIdList(ctx) {
 	  return this.visitChildren(ctx);
@@ -678,6 +690,12 @@ export default class ShonascriptxVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by ShonascriptxParser#arrowFuncMultiParam.
+	visitArrowFuncMultiParam(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by ShonascriptxParser#arrayLiteral.
 	visitArrayLiteral(ctx) {
 	  return this.visitChildren(ctx);
@@ -696,20 +714,8 @@ export default class ShonascriptxVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
-	// Visit a parse tree produced by ShonascriptxParser#propertyAccess.
-	visitPropertyAccess(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
 	// Visit a parse tree produced by ShonascriptxParser#nounClassInequality.
 	visitNounClassInequality(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
-	// Visit a parse tree produced by ShonascriptxParser#timeoutExpr.
-	visitTimeoutExpr(ctx) {
 	  return this.visitChildren(ctx);
 	}
 
@@ -822,6 +828,12 @@ export default class ShonascriptxVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by ShonascriptxParser#arrowFuncSingleParam.
+	visitArrowFuncSingleParam(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by ShonascriptxParser#functionCall.
 	visitFunctionCall(ctx) {
 	  return this.visitChildren(ctx);
@@ -842,12 +854,6 @@ export default class ShonascriptxVisitor extends antlr4.tree.ParseTreeVisitor {
 
 	// Visit a parse tree produced by ShonascriptxParser#nounClassNonExistence.
 	visitNounClassNonExistence(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
-	// Visit a parse tree produced by ShonascriptxParser#intervalExpr.
-	visitIntervalExpr(ctx) {
 	  return this.visitChildren(ctx);
 	}
 

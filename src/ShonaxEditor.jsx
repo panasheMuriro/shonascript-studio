@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { 
-  Play, 
   AlertCircle, 
   CheckCircle, 
   FileCode, 
@@ -26,7 +25,7 @@ import {
   Code2
 } from 'lucide-react';
 import FileManager from './FileManager';
-import { ShonaxLanguageDefinition, ShonaxTheme, ShonaxLanguageConfiguration } from './monaco-shonax-language';
+import { ShonaxLanguageDefinition, ShonaxTheme, ShonaxLanguageConfiguration} from './monaco-shonax-language';
 import { compileComponent } from '../shonascript/translator-core-shonax';
 import { translateShona } from '../shonascript/translator-core';
 
@@ -164,6 +163,7 @@ main()`,
     monaco.languages.register({ id: 'shonax' });
     monaco.languages.setMonarchTokensProvider('shonax', ShonaxLanguageDefinition);
     monaco.editor.defineTheme('shonax-dark', ShonaxTheme);
+    
     
     // Also register regular Shona language
     monaco.languages.register({ id: 'shona' });
@@ -507,59 +507,89 @@ main()`,
     setConsoleMessages([]);
   }, [code]);
 
-  const compileCode = useCallback(
-    debounce(async (sourceCode, fileName) => {
-      if (!fileName) return;
+const compileCode = useCallback(
+  debounce(async (sourceCode, fileName) => {
+    if (!fileName) return;
+    
+    setIsCompiling(true);
+    setErrors([]);
+    setWarnings([]);
+    
+    try {
+      const isShonax = fileName.endsWith('.shonax');
+      const isShona = fileName.endsWith('.shona');
       
-      setIsCompiling(true);
-      setErrors([]);
-      setWarnings([]);
+      let jsCode = '';
       
-      try {
-        const isShonax = fileName.endsWith('.shonax');
-        const isShona = fileName.endsWith('.shona');
+      if (isShonax) {
+        // Component file - use component compiler
+        const componentName = fileName.replace(/\.(shonax|shona)$/, '');
+        jsCode = compileComponent(sourceCode, componentName, {
+          target: 'component',
+          generateSourceMap: true
+        });
         
-        let jsCode = '';
+        // Use the new preview HTML with import support
+        const previewHtml = createPreviewHtmlWithImports(jsCode, files, currentFile);
+        setPreviewHtml(previewHtml);
+      } else if (isShona) {
+        // Regular Shona script - use regular translator
+        jsCode = translateShona(sourceCode, {
+          target: 'browser'
+        });
         
-        if (isShonax) {
-          // Component file - use component compiler
-          const componentName = fileName.replace(/\.(shonax|shona)$/, '');
-          jsCode = compileComponent(sourceCode, componentName, {
-            target: 'component',
-            generateSourceMap: true
-          });
-          
-          // Use the new preview HTML with import support
-          const previewHtml = createPreviewHtmlWithImports(jsCode, files, currentFile);
-          setPreviewHtml(previewHtml);
-        } else if (isShona) {
-          // Regular Shona script - use regular translator
-          jsCode = translateShona(sourceCode, {
-            target: 'browser'
-          });
-          
-          // Create a simple HTML wrapper for non-component scripts
-          const scriptHtml = createScriptHtml(jsCode);
-          setPreviewHtml(scriptHtml);
-        } else {
-          throw new Error('Unsupported file type. Use .shona or .shonax extension.');
-        }
-        
-        setCompiledCode(jsCode);
-        
-      } catch (error) {
-        console.error('Compilation error:', error);
-        setErrors([error.message]);
-      } finally {
-        setIsCompiling(false);
+        // Create HTML wrapper with import support - pass source code too
+        const scriptHtml = createScriptHtml(jsCode, files, sourceCode);
+        setPreviewHtml(scriptHtml);
+      } else {
+        throw new Error('Unsupported file type. Use .shona or .shonax extension.');
       }
-    }, 500),
-    [files, currentFile]
-  );
-
+      
+      setCompiledCode(jsCode);
+      
+    } catch (error) {
+      console.error('Compilation error:', error);
+      setErrors([error.message]);
+    } finally {
+      setIsCompiling(false);
+    }
+  }, 500),
+  [files, currentFile]
+);
   // Create HTML for non-component scripts
-  const createScriptHtml = (jsCode) => {
-    return `<!DOCTYPE html>
+const createScriptHtml = (jsCode, allFiles = files, sourceCode = code) => {
+  // First, extract imports from the SOURCE code (before translation)
+  const importRegex = /tora\s+(\w+)\s+kubva\s+mu\s+["']([^"']+)["']/g;
+  const imports = [];
+  let match;
+  
+  while ((match = importRegex.exec(sourceCode)) !== null) {
+    const [, importName, modulePath] = match;
+    const cleanPath = modulePath.replace(/\.(shona|shonax)$/, '');
+    imports.push({ importName, modulePath: cleanPath });
+  }
+  
+  // Compile all available .shona modules to make them available
+  const compiledModules = {};
+  
+  allFiles.forEach(file => {
+    if (file.path.endsWith('.shona') && file.path !== currentFile?.path) {
+      try {
+        const compiled = translateShona(file.content, { target: 'browser' });
+        const wrapped = wrapShonaModule(compiled);
+        const moduleName = file.name.replace('.shona', '');
+        compiledModules[moduleName] = wrapped;
+        // Also store with various path formats
+        compiledModules[file.name] = wrapped;
+        compiledModules[`./${file.name}`] = wrapped;
+        compiledModules[file.path] = wrapped;
+      } catch (error) {
+        console.error(`Error compiling ${file.path}:`, error);
+      }
+    }
+  });
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -594,6 +624,39 @@ main()`,
 <body>
     <div id="console-output" class="console-output"></div>
     <script>
+        // Compiled modules available for import
+        const __modules = ${JSON.stringify(compiledModules)};
+        const __moduleCache = {};
+        
+        // Function to load a module
+        function loadModule(moduleName) {            
+            if (__moduleCache[moduleName]) {
+                return __moduleCache[moduleName];
+            }
+            
+            // Try different path variations
+            const moduleCode = __modules[moduleName] || 
+                              __modules[moduleName + '.shona'] || 
+                              __modules['./' + moduleName] ||
+                              __modules['./' + moduleName + '.shona'];
+                              
+            if (moduleCode) {
+                try {
+
+                    const moduleFunc = new Function(moduleCode);
+                    const moduleExports = moduleFunc();
+                    __moduleCache[moduleName] = moduleExports;
+                    return moduleExports;
+                } catch (error) {
+                    console.error('Error loading module ' + moduleName + ':', error);
+                    return null;
+                }
+            }
+            
+            console.error('Module not found: ' + moduleName);
+            return null;
+        }
+        
         // Override console to show output in page
         const output = document.getElementById('console-output');
         const originalConsole = {
@@ -638,19 +701,57 @@ main()`,
             originalConsole.info(...arguments);
         };
         
-        // Execute the script
+        // Pre-load imports based on source code analysis
+        const imports = ${JSON.stringify(imports)};
+
+        
+        // Load all imports before executing the main code
+        const importedModules = {};
+        for (const imp of imports) {
+            const module = loadModule(imp.modulePath);
+            if (module) {
+                // Check if the imported name exists in the module
+                if (module[imp.importName]) {
+                    // It's a named export
+                    window[imp.importName] = module[imp.importName];
+                    importedModules[imp.importName] = module[imp.importName];
+                } else if (typeof module === 'function') {
+                    // It's a default export (function)
+                    window[imp.importName] = module;
+                    importedModules[imp.importName] = module;
+                } else {
+                    // It's an object with exports
+                    window[imp.importName] = module;
+                    importedModules[imp.importName] = module;
+                }
+       
+            } else {
+                console.error('Failed to import', imp.importName, 'from', imp.modulePath);
+            }
+        }
+        
+        // Process the main script code
+        let mainCode = ${JSON.stringify(jsCode)};
+        
+        // Remove the "Import from X ignored" comments
+        mainCode = mainCode.replace(/\\/\\/ Import from "[^"]*" ignored\\s*\\n/g, '');
+        
+        // Execute the processed script
         try {
-            ${jsCode}
+            // Create a wrapper function that has access to imported modules
+            const scriptFunc = new Function(...Object.keys(importedModules), mainCode);
+            scriptFunc(...Object.values(importedModules));
         } catch (error) {
             console.error('Script error:', error.message);
+            console.error('Stack:', error.stack);
         }
     </script>
 </body>
 </html>`;
-  };
+};
 
 
-  const createPreviewHtmlWithImports = (jsCode, files) => {
+const createPreviewHtmlWithImports = (jsCode, files) => {
     // Create virtual file system with all compiled components AND regular shona files
     const virtualFS = {};
     
@@ -678,13 +779,11 @@ main()`,
           console.error(`Error compiling ${file.path}:`, error);
         }
       } else if (file.path.endsWith('.shona')) {
-        // Add support for regular .shona files
         try {
           const compiledCode = translateShona(file.content, {
             target: 'browser'
           });
           
-          // Wrap the code to export functions
           const wrappedCode = wrapShonaModule(compiledCode);
           
           const paths = [
@@ -703,7 +802,6 @@ main()`,
       }
     });
 
-    
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -711,6 +809,10 @@ main()`,
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shonax Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -719,78 +821,144 @@ main()`,
             background: #f5f5f5;
             color: #333;
         }
-      
         .warning { color: #ff9800; }
         .info { color: #2196f3; }
-
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <script>
+    <script type="module">
         // Virtual file system with compiled components and modules
         const virtualFS = ${JSON.stringify(virtualFS)};
         const moduleCache = {};
+        const externalModuleCache = {};
         
         // Helper functions that will be available in all modules
-        function $$createText(data){
+        window.$$createText = function(data){
             if (data && data.nodeType) return data;
             return document.createTextNode(data);
         }
-        function $$listen(node,e,h){node.addEventListener(e,h);}
-        function $$setAttribute(n,a,v){
-            if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
-            else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
-            else{n.setAttribute(a,v);}
+        window.$$listen = function(node,e,h){node.addEventListener(e,h);}
+        
+        // Enhanced setAttribute to handle Lucide icons
+        window.$$setAttribute = function(n,a,v){
+            if(a==='value'||a==='checked'||a==='selected'){
+                n[a]=v;
+            } else if (v === false || v === null || v === undefined) { 
+                n.removeAttribute(a); 
+            } else {
+                n.setAttribute(a,v);
+                
+                // If setting data-lucide attribute, schedule icon initialization
+                if (a === 'data-lucide' && window.lucide) {
+                    // Use a microtask to ensure the element is in the DOM
+                    queueMicrotask(() => {
+                        if (n.isConnected) {
+                            lucide.createIcons({ icons: { nodes: [n] } });
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Load external module from URL
+        async function loadExternalModule(url) {
+            if (externalModuleCache[url]) {
+                return externalModuleCache[url];
+            }
+            
+            try {
+                const module = await import(url);
+                externalModuleCache[url] = module;
+                return module;
+            } catch (error) {
+                console.error('Failed to load external module:', url, error);
+                return null;
+            }
         }
         
         // Transform ES module code to be executable in browser
-        function transformModuleCode(code, modulePath, moduleType) {
+        async function transformModuleCode(code, modulePath, moduleType) {
             let transformedCode = code;
+            const imports = [];
+            
+            // Fixed regex with proper escaping
+            const importRegex = /import\\s+(?:(\\{[^}]*\\})|([\\w$]+)|\\*\\s+as\\s+([\\w$]+))\\s+from\\s+['"](.*?)['"]/g;
+            let match;
+            
+            while ((match = importRegex.exec(code)) !== null) {
+                const [fullMatch, namedImports, defaultImport, namespaceImport, modulePath] = match;
+                imports.push({
+                    fullMatch,
+                    namedImports,
+                    defaultImport,
+                    namespaceImport,
+                    modulePath,
+                    isExternal: modulePath.startsWith('http')
+                });
+            }
+            
+            // Load all external modules first
+            const loadedModules = {};
+            for (const imp of imports) {
+                if (imp.isExternal) {
+                    const module = await loadExternalModule(imp.modulePath);
+                    if (module) {
+                        loadedModules[imp.modulePath] = module;
+                    }
+                }
+            }
+            
+            // Replace imports with loaded modules
+            for (const imp of imports) {
+                if (imp.isExternal) {
+                    const module = loadedModules[imp.modulePath];
+                    if (module) {
+                        let replacement = '';
+                        if (imp.defaultImport) {
+                            replacement = \`const \${imp.defaultImport} = window.__externalModules['\${imp.modulePath}'].default || window.__externalModules['\${imp.modulePath}'];\`;
+                        } else if (imp.namedImports) {
+                            const names = imp.namedImports.replace(/[{}\\s]/g, '').split(',');
+                            replacement = names.map(name => {
+                                const [original, alias] = name.split(' as ').map(s => s.trim());
+                                const varName = alias || original;
+                                return \`const \${varName} = window.__externalModules['\${imp.modulePath}'].\${original};\`;
+                            }).join('\\n');
+                        } else if (imp.namespaceImport) {
+                            replacement = \`const \${imp.namespaceImport} = window.__externalModules['\${imp.modulePath}'];\`;
+                        }
+                        transformedCode = transformedCode.replace(imp.fullMatch, replacement);
+                    }
+                } else {
+                    // Handle local imports
+                    const moduleName = imp.defaultImport || imp.namespaceImport;
+                    const replacement = \`
+const __tempModule_\${moduleName} = window.__localModules['\${imp.modulePath}'] || 
+                    window.__localModules['\${imp.modulePath}.js'] || 
+                    window.__localModules['./\${imp.modulePath}'] || 
+                    window.__localModules['./\${imp.modulePath}.js'];
+const \${moduleName} = __tempModule_\${moduleName} && __tempModule_\${moduleName}.\${moduleName} ? __tempModule_\${moduleName}.\${moduleName} : __tempModule_\${moduleName};\`;
+                    transformedCode = transformedCode.replace(imp.fullMatch, replacement);
+                }
+            }
+            
+            // Store loaded external modules globally
+            window.__externalModules = loadedModules;
             
             if (moduleType === 'component') {
-                // Handle component modules
-                transformedCode = transformedCode.replace(
-                    /export\\s+default\\s+function\\s+(\\w+)/g,
-                    'const $1 = function'
-                );
-                
-                // Handle imports - both default and named
-                transformedCode = transformedCode.replace(
-                    /import\\s+(\\w+)\\s+from\\s+['"](.*?)['"]/g,
-                    (match, name, path) => {
-                        // The module should already be loaded in window.__imports
-                        return \`const \${name} = window.__imports['\${path}'] || window.__imports['\${path}.js'] || window.__imports['./\${path}'] || window.__imports['./\${path}.js'];\`;
-                    }
-                );
-                
-                // Remove export statements
-                transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
+                // Remove export default
+                transformedCode = transformedCode.replace(/export\\s+default\\s+function\\s+(\\w+)/g, 'function $1');
                 transformedCode = transformedCode.replace(/export\\s+default\\s+/g, '');
                 
-                // Return the main component
-                const componentMatch = transformedCode.match(/const\\s+(\\w+)\\s+=\\s+function/);
-                if (componentMatch) {
-                    transformedCode += \`\\n; window.__currentModule = \${componentMatch[1]};\`;
+                // Find the main function and return it
+                const funcMatch = transformedCode.match(/function\\s+(\\w+)\\s*\\([^)]*\\)\\s*{/);
+                if (funcMatch) {
+                    transformedCode += \`\\n; return \${funcMatch[1]};\`;
                 }
             } else if (moduleType === 'module') {
-                // Handle regular .shona modules
-                // Remove export statements but keep the functions
-                transformedCode = transformedCode.replace(/export\\s+{[^}]*}/g, '');
-                transformedCode = transformedCode.replace(/export\\s+default\\s+{[^}]*}/g, '');
-                
-                // Extract all functions and create an object
-                const functions = {};
-                const functionMatches = [...transformedCode.matchAll(/function\\s+(\\w+)\\s*\\([^)]*\\)\\s*{/g)];
-                
-                for (const match of functionMatches) {
-                    functions[match[1]] = match[1];
-                }
-                
-                // Create module export
-                if (Object.keys(functions).length > 0) {
-                    const funcList = Object.keys(functions).join(', ');
-                    transformedCode += \`\\n; window.__currentModule = { \${funcList} };\`;
+                // For .shona modules
+                if (!transformedCode.includes('return {')) {
+                    transformedCode += '\\nreturn {};';
                 }
             }
             
@@ -798,11 +966,8 @@ main()`,
         }
         
         // Load a module from virtual FS
-        function loadModule(path) {
-            // Normalize path
+        async function loadModule(path) {
             const normalizedPath = path.endsWith('.js') ? path : path + '.js';
-            
-            // Check various path formats
             const possiblePaths = [
                 normalizedPath,
                 \`./\${normalizedPath}\`,
@@ -814,15 +979,15 @@ main()`,
                 if (virtualFS[p]) {
                     if (!moduleCache[p]) {
                         const moduleInfo = virtualFS[p];
-                        const code = moduleInfo.code;
-                        const transformedCode = transformModuleCode(code, p, moduleInfo.type);
+                        const transformedCode = await transformModuleCode(moduleInfo.code, p, moduleInfo.type);
                         
                         try {
-                            // Create a function that returns the module
-                            const moduleFunc = new Function(transformedCode + '; return window.__currentModule;');
-                            moduleCache[p] = moduleFunc();
+                            const moduleFunc = new Function(transformedCode);
+                            const result = moduleFunc();
+                            moduleCache[p] = result;
                         } catch (error) {
                             console.error('Error loading module', p, error);
+                            console.error('Transformed code:', transformedCode);
                             moduleCache[p] = null;
                         }
                     }
@@ -834,18 +999,14 @@ main()`,
             return null;
         }
         
-        // Store imports globally for access within modules
-        window.__imports = {};
+        // Store local modules globally
+        window.__localModules = {};
         
-        // Pre-load all imports referenced in the main component
-        const mainCode = ${JSON.stringify(jsCode)};
-        const importMatches = mainCode.matchAll(/import\\s+(\\w+)\\s+from\\s+['"](.*?)['"]/g);
-        
-        for (const match of importMatches) {
-            const [, name, path] = match;
-            const module = loadModule(path);
+        // Pre-load all local modules
+        for (const [path, moduleInfo] of Object.entries(virtualFS)) {
+            const module = await loadModule(path);
             if (module) {
-                window.__imports[path] = module;
+                window.__localModules[path] = module;
             }
         }
         
@@ -898,20 +1059,75 @@ main()`,
         console.warn = function() { sendConsoleMessage('warn', arguments); };
         console.info = function() { sendConsoleMessage('info', arguments); };
 
-        // Execute the main component
-        (function() {
-            try {
-                // Transform and execute the main component code
-                const transformedMainCode = transformModuleCode(mainCode, 'main', 'component');
+        // Initialize Lucide icons with proper timing
+        function initializeLucideIcons() {
+            if (window.lucide) {
+                // Wait a bit to ensure all elements are in the DOM
+                requestAnimationFrame(() => {
+                    lucide.createIcons();
+                });
+            }
+        }
+
+        // Set up MutationObserver for dynamic icon creation
+        function setupIconObserver() {
+            if (!window.lucide) return;
+            
+            const observer = new MutationObserver((mutations) => {
+                let hasNewIcons = false;
                 
-                // Execute the transformed code
-                const executeCode = new Function(transformedMainCode + '; return window.__currentModule;');
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.nodeType === 1) { // Element node
+                                if (node.hasAttribute('data-lucide') || 
+                                    node.querySelector('[data-lucide]')) {
+                                    hasNewIcons = true;
+                                }
+                            }
+                        });
+                    } else if (mutation.type === 'attributes' && 
+                               mutation.attributeName === 'data-lucide') {
+                        hasNewIcons = true;
+                    }
+                });
+                
+                if (hasNewIcons) {
+                    requestAnimationFrame(() => {
+                        lucide.createIcons();
+                    });
+                }
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['data-lucide']
+            });
+            
+            return observer;
+        }
+
+        // Execute the main component
+        (async function() {
+            try {
+                const mainCode = ${JSON.stringify(jsCode)};
+                const transformedMainCode = await transformModuleCode(mainCode, 'main', 'component');
+                
+                const executeCode = new Function(transformedMainCode);
                 const MainComponent = executeCode();
                 
                 if (typeof MainComponent === 'function') {
                     const component = MainComponent();
                     if (component) {
                         document.getElementById('root').appendChild(component);
+                        
+                        // Initialize icons after component is mounted
+                        initializeLucideIcons();
+                        
+                        // Set up observer for future changes
+                        setupIconObserver();
                     } else {
                         console.error('Component returned null or undefined');
                     }
@@ -931,40 +1147,72 @@ main()`,
 </body>
 </html>`;
   };
+const wrapShonaModule = (jsCode) => {
+  // The translateShona function likely wraps code in an IIFE, we need to extract the functions
+  let cleanCode = jsCode;
+  
+  // Remove IIFE wrapper if present
+  cleanCode = cleanCode.replace(/^\s*\(\s*function\s*\(\)\s*{\s*/m, '');
+  cleanCode = cleanCode.replace(/\s*}\s*\)\s*\(\s*\)\s*;\s*$/m, '');
+  
+  // Remove helper functions that might be added by the translator
+  cleanCode = cleanCode.replace(/function\s+\$\$createText[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+\$\$listen[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+\$\$setAttribute[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+_runEffects[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+_render[\s\S]*?(?=function\s+\w+|$)/m, '');
+  cleanCode = cleanCode.replace(/function\s+_runComputations[\s\S]*?(?=function\s+\w+|$)/m, '');
+  
+  // Extract all function declarations (but skip helper functions)
+  const exportedFunctions = [];
+  const functionBodies = {};
+  const functionRegex = /function\s+(\w+)\s*\([^)]*\)\s*{([^}]+{[^}]*}[^}]*|[^}]*)}/g;
+  let match;
+  
+  while ((match = functionRegex.exec(cleanCode)) !== null) {
+    const funcName = match[1];
+    const fullFunction = match[0];
+    // Skip helper functions
+    if (!funcName.startsWith('$$') && !funcName.startsWith('_') && funcName !== 'main') {
+      exportedFunctions.push(funcName);
+      functionBodies[funcName] = fullFunction;
+    }
+  }
+  
+  // Also check for arrow functions assigned to variables
+  const arrowFuncRegex = /((?:const|let|var)\s+(\w+)\s*=\s*(?:\([^)]*\)|[^=])\s*=>[^;]+;)/g;
+  while ((match = arrowFuncRegex.exec(cleanCode)) !== null) {
+    const funcName = match[2];
+    const fullFunction = match[1];
+    if (!funcName.startsWith('$$') && !funcName.startsWith('_')) {
+      exportedFunctions.push(funcName);
+      functionBodies[funcName] = fullFunction;
+    }
+  }
+  
+  // Create a module that returns ONLY the functions, no other code execution
+  if (exportedFunctions.length > 0) {
+    // Build the module code with ONLY function definitions
+    const functionDefinitions = exportedFunctions
+      .map(funcName => functionBodies[funcName] || '')
+      .filter(Boolean)
+      .join('\n\n');
+    
+    const moduleCode = `
+// Module exports only - no code execution
+${functionDefinitions}
 
-  const wrapShonaModule = (jsCode) => {
-    // Remove the helper functions and IIFE wrapper
-    let cleanCode = jsCode;
-    
-    // Remove the helper functions block
-    cleanCode = cleanCode.replace(/function \$\$createText[\s\S]*?function _runEffects\(\)[^}]*}/m, '');
-    
-    // Remove the wrapping (function(){ ... })();
-    cleanCode = cleanCode.replace(/^\s*\(\s*function\s*\(\)\s*{\s*/m, '');
-    cleanCode = cleanCode.replace(/\s*}\s*\)\s*\(\s*\)\s*;\s*$/m, '');
-    
-    // Extract all function declarations
-    const exportedFunctions = [];
-    
-    // Match function declarations (like "function sanganisa")
-    const funcMatches = cleanCode.matchAll(/function\s+(\w+)\s*\([^)]*\)/gm);
-    for (const match of funcMatches) {
-      exportedFunctions.push(match[1]);
-    }
-    
-    // Build the export statement
-    if (exportedFunctions.length > 0) {
-      // Export each function as a named export
-      const exports = exportedFunctions.map(fn => `export { ${fn} };`).join('\n');
-      
-      // Also create a default export with all functions
-      const defaultExport = `\nexport default { ${exportedFunctions.join(', ')} };`;
-      
-      return `${cleanCode}\n${exports}\n${defaultExport}`;
-    }
-    
-    return cleanCode;
-  };
+// Return module exports
+return {
+  ${exportedFunctions.join(',\n  ')}
+};
+`;
+    return moduleCode;
+  }
+  
+  // If no functions found, return empty export
+  return 'return {};';
+};
 
   // Update code when file changes
   useEffect(() => {
@@ -1359,7 +1607,7 @@ main()`,
                     <Editor
                       height="calc(100% - 40px)"
                       defaultLanguage="javascript"
-                      theme="vs-dark"
+                      theme="shonax-dark"
                       value={compiledCode}
                       options={{
                         minimap: { enabled: false },
@@ -1406,7 +1654,7 @@ main()`,
                 onChange={(e) => setEditorTheme(e.target.value)}
               >
                 <option value="shonax-dark">Shonax Dark</option>
-                <option value="vs-dark">VS Dark</option>
+                {/* <option value="vs-dark">VS Dark</option> */}
                 <option value="vs">VS Light</option>
               </select>
             </div>
