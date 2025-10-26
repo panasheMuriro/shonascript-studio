@@ -32,9 +32,14 @@ simpleStatement
     | fetchStatement
     | linearObjectDefinition 
     | propsDeclaration 
-    | reactiveOneLiner       
+    | reactiveOneLiner   
+    | homweDeclaration            
     ;
 
+homweDeclaration
+    : SHANDISA HOMWE ID                //  shandisa homwe homweName
+    ;
+    
 reactiveOneLiner
     : TARISA COLON statement           
     ;
@@ -133,48 +138,6 @@ logicalFilterExpression
 comparisonOperator : '>' | '<' | '>=' | '<=' | '==' | '!=' ;
 
 /* ─────────────── HTML ELEMENTS ──────────────── */
-// htmlElement
-//     : LT tagName 
-//       ( WS_IN_HTML |                         
-//         attribute                            
-//       | NEWLINE )*
-//       GT
-//        htmlContent
-//        LT SLASH tagName GT NEWLINE*         #htmlBlockElement
-//     | LT tagName 
-//       (attribute | WS_IN_HTML | NEWLINE)*
-//       SLASH GT NEWLINE*
-//        #htmlSelfClosingElement
-//     ;
-
-// htmlElement
-//     : LT tagName
-//       (attribute | WS_IN_HTML | NEWLINE)*        // attr list
-//       GT NEWLINE*                                #htmlVoidElement   // ① NEW
-//     | LT tagName
-//       ( WS_IN_HTML | attribute | NEWLINE )*
-//       GT
-//       htmlContent
-//       LT SLASH tagName GT NEWLINE*               #htmlBlockElement
-//     | LT tagName
-//       (attribute | WS_IN_HTML | NEWLINE)*
-//       SLASH GT NEWLINE*                          #htmlSelfClosingElement
-//     ;
-
-// htmlElement
-//     : LT tagName
-//       (attribute | WS_IN_HTML | NEWLINE)*
-//       GT                          #htmlVoidElement    // no NEWLINE* here
-//     | LT tagName
-//       ( WS_IN_HTML | attribute | NEWLINE )*
-//       GT
-//       htmlContent
-//       LT SLASH tagName GT NEWLINE*  #htmlBlockElement
-//     | LT tagName
-//       (attribute | WS_IN_HTML | NEWLINE)*
-//       SLASH GT NEWLINE*             #htmlSelfClosingElement
-//     ;
-
 
 htmlElement
     // 1️⃣  FULL form  <tag …> … </tag>
@@ -202,7 +165,13 @@ attribute
     | eventHandler                           #htmlEventHandler
     ;
 
-attrName : ID | EVENT_CLICK | EVENT_SUBMIT | EVENT_CHANGE | CLASS | ZVANYORWA | IKANYORWA | IKASARUDZWA | ZVASARUDZWA ;
+// attrName : ID | EVENT_CLICK | EVENT_SUBMIT | EVENT_CHANGE | CLASS | ZVANYORWA | IKANYORWA | IKASARUDZWA | ZVASARUDZWA ;
+
+attrName 
+    : ID (MINUS ID)*  // Allows data-lucide, aria-label, etc.
+    | EVENT_CLICK | EVENT_SUBMIT | EVENT_CHANGE | CLASS 
+    | ZVANYORWA | IKANYORWA | IKASARUDZWA | ZVASARUDZWA 
+    ;
 
 eventHandler : (EVENT_CLICK | EVENT_SUBMIT | EVENT_CHANGE) EQ shonaExpression;
 
@@ -213,9 +182,10 @@ htmlContent
 
 htmlContentElement
     : htmlElement
-    | shonaControlFlow      
-    | shonaExpression       
-    | htmlText              
+    | shonaControlFlow      // {pane ...} or {kana ...}
+    | shonaExpression       // {expression}
+    | htmlText              // Any text that's NOT inside {}
+    | WS_IN_HTML
     | NEWLINE
     | INDENT
     | DEDENT
@@ -315,8 +285,12 @@ htmlSuite
 
 shonaExpression : LBRACE expression RBRACE ;
 
+// htmlText
+//     : htmlTextContent+
+//     ;
+
 htmlText
-    : htmlTextContent+
+    : (~(LT | LBRACE | NEWLINE | INDENT | DEDENT))+
     ;
 
 htmlTextContent
@@ -367,14 +341,27 @@ htmlTextContent
 
 /* ─────────────── ORIGINAL SHONASCRIPT FEATURES ────── */
 inputStatement : BVUNZA ID STRING ;
-// importStatement : TORA ID KUBVA MU ID ;
+
 fetchStatement  : TAMBIRA ID KUBVA KU (STRING | ID) ;
+// importStatement
+//     : TORA idList KUBVA MU modulePath
+//     ;
+
 importStatement
-    : TORA idList KUBVA MU modulePath
+    : TORA importSpecifier KUBVA MU modulePath
     ;
 
+importSpecifier
+    : ID (COMMA LBRACE idList RBRACE)?       #defaultAndNamedImport
+    | LBRACE idList RBRACE                   #namedOnlyImport
+    ;
+
+
 idList      : ID (COMMA ID)* ;
-modulePath  : ID | STRING ;
+// modulePath  : ID | STRING ;
+modulePath  : (ID | STRING | FILE_PATH) ;
+FILE_PATH: [a-zA-Z0-9_./-]+ ('.shonax' | '.shona') ;
+
 
 propName : ID | BASA ;
 // propertyRef : propName POS ID (POS ID)* ;
@@ -482,8 +469,9 @@ additiveExpression
     ;
 
 multiplicativeExpression
-    : powerExpression (('*' | '/' | '%') powerExpression)*   // ← was unaryExpression
+    : powerExpression (('*' | '/' | '%') powerExpression)*
     ;
+
 powerExpression
     : unaryExpression ('**' powerExpression)?
     ;
@@ -494,45 +482,47 @@ unaryExpression
     ;
 
 primaryExpression
-    : domPropertyRef #domPropertyGet
-    | propertyRef #propertyGet
-    | ID POS ID (POS ID)+ #propertyAccess
-    | BASA POS ID (POS ID)* ID '(' argumentList? ')' #methodCall 
-    | ID '(' argumentList? ')' #functionCall
-    | (FUNCTION | BASA) '(' parameterList? ')' COLON suite #anonymousFunctionExpr
-    | '[' NEWLINE* arrayElements? NEWLINE* ']' #arrayLiteral
-    | '[' rangeExpression ']' #arrayRange 
-    | VERENGA primaryExpression #lengthExpr
-    | BATANIDZA primaryExpression #joinExpr
-    | PA expression MU (ID | STRING) #indexOp
-    | '[' arrayElements? ']' VAKASIYANA #setExpr
-    | ID VAKASIYANA #varToSetExpr
-    | primaryExpression VAKASIYANA #exprToSetExpr
-    | BVUNZA STRING                       #inputExpr
-    | primaryExpression DZOKORORA expression SECONDS #intervalExpr
-    | primaryExpression MIRIRA expression SECONDS #timeoutExpr
-    | TAMBIRA ID KUBVA KU (STRING | ID)      #fetchExpr
-    | NUMBER #number
-    | BOOLEAN #boolean
-    | STRING #string
-    | ID #variable
-    | ZVANYORWA #zvanyorwaVar 
-    | '(' expression ')' #parens
-    | primaryExpression NCLASS MU expression #inArrayOp
-    | primaryExpression NCLASS MU STRING #inStringOp
+    // --- POSTFIX OPERATIONS (Left-Recursive) ---
+    : primaryExpression '(' argumentList? ')'               #methodCall
+    | primaryExpression '.' ID                              #dotAccess
+    | primaryExpression '[' expression ']'                  #bracketAccess
+    | primaryExpression NCLASS MU expression                #inArrayOp
+    | primaryExpression NCLASS MU STRING                    #inStringOp
     | primaryExpression EQUALITY_VERB EQUALITY_PREPOSITION expression #naturalEqualityOp
-    | primaryExpression NCLASS primaryExpression #nounClassEquality
-    | primaryExpression SIRI_SUFFIX primaryExpression #nounClassInequality
-    | primaryExpression RIPO_SUFFIX #nounClassExistence
-    | primaryExpression SIPO_SUFFIX #nounClassNonExistence
-    | objectLiteral #objLiteral
-    | jsObjectLiteral #jsObjLiteral
-    | primaryExpression '.' ID #dotAccess
-    | primaryExpression '[' expression ']' #bracketAccess
-    | htmlElement                                   #htmlExpr
+    | primaryExpression NCLASS primaryExpression            #nounClassEquality
+    | primaryExpression SIRI_SUFFIX primaryExpression       #nounClassInequality
+    | primaryExpression RIPO_SUFFIX                         #nounClassExistence
+    | primaryExpression SIPO_SUFFIX                         #nounClassNonExistence
+    | primaryExpression VAKASIYANA                          #exprToSetExpr
+
+    // --- ATOMIC/PREFIX EXPRESSIONS ---
+    | ID ARROW expression                                   #arrowFuncSingleParam  // <-- NEW
+    | '(' parameterList? ')' ARROW expression               #arrowFuncMultiParam   // <-- NEW
+    | domPropertyRef                                        #domPropertyGet
+    | propertyRef                                           #propertyGet
+    | ID '(' argumentList? ')'                              #functionCall
+    | (FUNCTION | BASA) '(' parameterList? ')' COLON suite  #anonymousFunctionExpr
+    | '[' NEWLINE* arrayElements? NEWLINE* ']'              #arrayLiteral
+    | '[' rangeExpression ']'                               #arrayRange
+    | VERENGA primaryExpression                             #lengthExpr
+    | BATANIDZA primaryExpression                           #joinExpr
+    | PA expression MU (ID | STRING)                        #indexOp
+    | '[' arrayElements? ']' VAKASIYANA                     #setExpr
+    | ID VAKASIYANA                                         #varToSetExpr
+    | BVUNZA STRING                                         #inputExpr
+    | TAMBIRA ID KUBVA KU (STRING | ID)                     #fetchExpr
+    | NUMBER                                                #number
+    | BOOLEAN                                               #boolean
+    | STRING                                                #string
+    | ID                                                    #variable
+    | ZVANYORWA                                             #zvanyorwaVar
+    | '(' expression ')'                                    #parens
+    | objectLiteral                                         #objLiteral
+    | jsObjectLiteral                                       #jsObjLiteral
+    | htmlElement                                           #htmlExpr
     ;
 
-// Inline object literal (for use in arrays, expressions, etc.)
+
 objectLiteral
     : (HAS | PANE) COLON linearObjectEntries ';'?
     ;
@@ -569,7 +559,8 @@ parameterList : ID (',' ID)* ;
 
 /* ─────────────── LEXER RULES ───────────────────────── */
 // Keywords - ORDER MATTERS!
-
+SHANDISA : 'shandisa' ;
+HOMWE    : 'homwe'   ;
 LOGICAL_AND : '&&' ;
 LOGICAL_OR  : '||' ;
 PANE      : 'pane' ;
@@ -650,10 +641,32 @@ DEDENT  : 'DEDENT' ;
 
 // Identifiers and literals
 ID     : [a-zA-Z_][a-zA-Z_0-9]* ;
+
 NUMBER : [0-9]+ ('.' [0-9]+)? ;
-STRING : '"' (ESC | ~["\\\r\n])* '"' ;
-fragment ESC : '\\' ["\\/bfnrt] | '\\\\' | '\\u' HEX HEX HEX HEX ;
+// STRING : '"' (ESC | ~["\\\r\n])* '"' ;
+
+// Whitespace and newlines
+NEWLINE : '\r'? '\n' ;
+WS : [ \t]+ -> skip ;
+WS_IN_HTML : [ \t]+ ;
+
+
+// Comments
+COMMENT : '//' ~[\r\n]* -> skip ;
+MULTILINE_COMMENT : '/*' .*? '*/' -> skip ;
+TRIPLE_QUOTE_COMMENT 
+    : ('"""' .*? '"""' 
+    | '\'\'\'' .*? '\'\'\'') -> skip
+    ;
+
+// fragment ESC : '\\' ["\\/bfnrt] | '\\\\' | '\\u' HEX HEX HEX HEX ;
 fragment HEX : [0-9a-fA-F] ;
+STRING : '"' (ESC | ~["\\\r\n])* '"' 
+       | '\'' (ESC_SQ | ~['\\\r\n])* '\'' ;
+
+// Update the ESC fragment to handle both quote types
+fragment ESC : '\\' ["\\/bfnrt] | '\\\\' | '\\u' HEX HEX HEX HEX ;
+fragment ESC_SQ : '\\' ['\\/bfnrt] | '\\\\' | '\\u' HEX HEX HEX HEX ;
 
 // HTML & Operators
 HTML_COMMENT : '<!--' .*? '-->' -> skip ;
@@ -667,6 +680,7 @@ RPAREN : ')' ;
 LBRACKET : '[' ;
 RBRACKET : ']' ;
 EQ : '=' ;
+ARROW : '=>';
 PLUS : '+' ; 
 MINUS : '-' ; 
 MUL : '*' ; 
@@ -681,13 +695,7 @@ COMMA : ',' ;
 DOT : '.' ;
 COLON : ':' ;
 
-// Whitespace and newlines
-NEWLINE : '\r'? '\n' ;
-WS : [ \t]+ -> skip ;
-WS_IN_HTML : [ \t]+ ;
 
-// Comments
-COMMENT : '//' ~[\r\n]* -> skip ;
 
 // Catch-all
 OTHER_TEXT : [#] | . ;
