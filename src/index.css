@@ -690,3 +690,75 @@
 .file-tree-children {
   position: relative;
 }
+
+
+
+/* Add to your main CSS file (e.g., ShonaxEditor.css) */
+
+.editor-panel-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.no-file-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #1e1e1e; /* Match your editor's background */
+  color: #888;
+  z-index: 10;
+  gap: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.no-file-overlay .create-file-btn {
+  background-color: #007acc;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.no-file-overlay .create-file-btn:hover {
+  background-color: #005a9e;
+}
+
+
+/* Add to your main CSS file (e.g., ShonaxEditor.css) */
+
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-content-container {
+  flex-grow: 1; /* Make this container take up all remaining vertical space */
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-panel {
+  width: 100%;
+  height: 100%;
+  overflow: auto; /* Allow scrolling within each panel if needed */
+}
+
+.compiled-code {
+  height: 100%; /* Ensure compiled code div fills its parent panel */
+}
+
+/* Ensure the iframe fills its panel too */
+.preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}

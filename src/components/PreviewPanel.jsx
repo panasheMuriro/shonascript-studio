@@ -1,10 +1,134 @@
+// // src/components/PreviewPanel.jsx
+
+// import React, { useState, useEffect, useRef } from 'react';
+// import Editor from '@monaco-editor/react';
+// import {
+//   Eye, Terminal, FileCode, Trash2, Clock,
+//   Copy, Download, AlertCircle
+// } from 'lucide-react';
+// import { copyToClipboard, downloadCode, formatConsoleMessage, getConsoleMessageClass } from '../utils';
+
+// const PreviewPanel = ({
+//   previewHtml,
+//   compiledCode,
+//   errors,
+//   consoleMessages,
+//   onClearConsole,
+//   currentFile,
+//   onEditorWillMount, // <-- 1. Receive the setup function as a prop
+//   editorTheme       // <-- 2. Receive the current theme as a prop
+// }) => {
+//   const [activeTab, setActiveTab] = useState('preview');
+//   const consoleEndRef = useRef(null);
+//   const previewRef = useRef(null);
+
+//   useEffect(() => {
+//     if (consoleEndRef.current) {
+//       consoleEndRef.current.scrollIntoView({ behavior: 'smooth' });
+//     }
+//   }, [consoleMessages]);
+
+//   return (
+//     <div className="preview-panel h-full">
+//       <div className="preview-tabs">
+//         {/* Tab buttons remain the same */}
+//         <button className={`tab ${activeTab === 'preview' ? 'active' : ''}`} onClick={() => setActiveTab('preview')}><Eye size={16} /> Preview</button>
+//         <button className={`tab ${activeTab === 'console' ? 'active' : ''}`} onClick={() => setActiveTab('console')}><Terminal size={16} /> Console</button>
+//         <button className={`tab ${activeTab === 'compiled' ? 'active' : ''}`} onClick={() => setActiveTab('compiled')}><FileCode size={16} /> Compiled JS</button>
+//       </div>
+
+//       <div className="preview-content">
+//         {activeTab === 'preview' && (
+//           <iframe
+//             ref={previewRef}
+//             className="preview-iframe"
+//             srcDoc={previewHtml}
+//             title="Preview"
+//             sandbox="allow-scripts allow-same-origin" // allow-same-origin is needed for postMessage
+//           />
+//         )}
+
+//         {activeTab === 'console' && (
+//           <div className="console-panel">
+//             {/* Console UI remains the same */}
+//             <div className="console-header">
+//               <span className="console-title">Console Output</span>
+//               <button className="console-clear-btn" onClick={onClearConsole} title="Clear Console">
+//                 <Trash2 size={14} /> Clear
+//               </button>
+//             </div>
+//             <div className="console-content">
+//               {consoleMessages.length === 0 ? (
+//                 <div className="console-empty">
+//                   <Terminal size={24} />
+//                   <p>Console output will appear here</p>
+//                 </div>
+//               ) : (
+//                 <div className="console-messages">
+//                   {consoleMessages.map((msg) => (
+//                     <div key={msg.id} className={`console-message ${getConsoleMessageClass(msg.method)}`}>
+//                       <span className="console-timestamp"><Clock size={12} /> {msg.timestamp}</span>
+//                       <span className="console-text">{formatConsoleMessage(msg)}</span>
+//                     </div>
+//                   ))}
+//                   <div ref={consoleEndRef} />
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+//         )}
+
+//         {activeTab === 'compiled' && (
+//           <div className="compiled-code">
+//             <div className="code-actions">
+//               <button className="action-btn" onClick={() => copyToClipboard(compiledCode)}>
+//                 <Copy size={14} /> Copy JS
+//               </button>
+//               <button className="action-btn" onClick={() => downloadCode(currentFile ? currentFile.name.replace(/\.(shona|shonax)$/, '.js') : 'compiled.js', compiledCode)}>
+//                 <Download size={14} /> Download JS
+//               </button>
+//             </div>
+//             <Editor
+//               height="calc(100% - 40px)"
+//               defaultLanguage="javascript"
+//               theme={editorTheme} // <-- 3. Use the theme prop
+//               value={compiledCode}
+//               beforeMount={onEditorWillMount} // <-- 4. Pass the setup function here
+//               options={{
+//                 readOnly: true,
+//                 minimap: { enabled: false },
+//                 fontSize: 14,
+//                 fontFamily: "'Jetbrains Mono', 'Fira Code', monospace",
+//                 lineNumbers: 'on',
+//                 scrollBeyondLastLine: false,
+//                 automaticLayout: true,
+//                 wordWrap: 'on'
+//               }}
+//             />
+//           </div>
+//         )}
+//       </div>
+
+//       {errors.length > 0 && (
+//         <div className="error-panel">
+//           {/* Error panel UI remains the same */}
+//           <div className="error-header"><AlertCircle size={16} /><span>Compilation Errors</span></div>
+//           <div className="error-list">{errors.map((error, index) => (<div key={index} className="error-item">{error}</div>))}</div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default PreviewPanel;
+
 // src/components/PreviewPanel.jsx
 
 import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import { 
-  Eye, Terminal, FileCode, Trash2, Clock, 
-  Copy, Download, AlertCircle 
+import {
+  Eye, Terminal, FileCode, Trash2, Clock,
+  Copy, Download, AlertCircle
 } from 'lucide-react';
 import { copyToClipboard, downloadCode, formatConsoleMessage, getConsoleMessageClass } from '../utils';
 
@@ -14,7 +138,9 @@ const PreviewPanel = ({
   errors,
   consoleMessages,
   onClearConsole,
-  currentFile
+  currentFile,
+  onEditorWillMount,
+  editorTheme
 }) => {
   const [activeTab, setActiveTab] = useState('preview');
   const consoleEndRef = useRef(null);
@@ -29,51 +155,33 @@ const PreviewPanel = ({
   return (
     <div className="preview-panel h-full">
       <div className="preview-tabs">
-        <button
-          className={`tab ${activeTab === 'preview' ? 'active' : ''}`}
-          onClick={() => setActiveTab('preview')}
-        >
-          <Eye size={16} />
-          Preview
-        </button>
-        <button
-          className={`tab ${activeTab === 'console' ? 'active' : ''}`}
-          onClick={() => setActiveTab('console')}
-        >
-          <Terminal size={16} />
-          Console
-        </button>
-        <button
-          className={`tab ${activeTab === 'compiled' ? 'active' : ''}`}
-          onClick={() => setActiveTab('compiled')}
-        >
-          <FileCode size={16} />
-          Compiled JS
-        </button>
+        <button className={`tab ${activeTab === 'preview' ? 'active' : ''}`} onClick={() => setActiveTab('preview')}><Eye size={16} /> Preview</button>
+        <button className={`tab ${activeTab === 'console' ? 'active' : ''}`} onClick={() => setActiveTab('console')}><Terminal size={16} /> Console</button>
+        <button className={`tab ${activeTab === 'compiled' ? 'active' : ''}`} onClick={() => setActiveTab('compiled')}><FileCode size={16} /> Compiled JS</button>
       </div>
 
-      <div className="preview-content">
-        {activeTab === 'preview' && (
+      {/* The parent container needs a defined height and relative positioning for children */}
+      <div className="preview-content-container">
+        {/* --- THIS IS THE KEY FIX --- */}
+        {/* We render all panels but use CSS to show only the active one. */}
+        {/* This prevents the components from unmounting and re-mounting. */}
+
+        <div style={{ display: activeTab === 'preview' ? 'block' : 'none' }} className="tab-panel">
           <iframe
             ref={previewRef}
             className="preview-iframe"
             srcDoc={previewHtml}
             title="Preview"
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-same-origin"
           />
-        )}
+        </div>
 
-        {activeTab === 'console' && (
+        <div style={{ display: activeTab === 'console' ? 'block' : 'none' }} className="tab-panel">
           <div className="console-panel">
             <div className="console-header">
               <span className="console-title">Console Output</span>
-              <button 
-                className="console-clear-btn"
-                onClick={onClearConsole}
-                title="Clear Console"
-              >
-                <Trash2 size={14} />
-                Clear
+              <button className="console-clear-btn" onClick={onClearConsole} title="Clear Console">
+                <Trash2 size={14} /> Clear
               </button>
             </div>
             <div className="console-content">
@@ -86,13 +194,8 @@ const PreviewPanel = ({
                 <div className="console-messages">
                   {consoleMessages.map((msg) => (
                     <div key={msg.id} className={`console-message ${getConsoleMessageClass(msg.method)}`}>
-                      <span className="console-timestamp">
-                        <Clock size={12} />
-                        {msg.timestamp}
-                      </span>
-                      <span className="console-text">
-                        {formatConsoleMessage(msg)}
-                      </span>
+                      <span className="console-timestamp"><Clock size={12} /> {msg.timestamp}</span>
+                      <span className="console-text">{formatConsoleMessage(msg)}</span>
                     </div>
                   ))}
                   <div ref={consoleEndRef} />
@@ -100,34 +203,24 @@ const PreviewPanel = ({
               )}
             </div>
           </div>
-        )}
+        </div>
         
-        {activeTab === 'compiled' && (
+        <div style={{ display: activeTab === 'compiled' ? 'block' : 'none' }} className="tab-panel">
           <div className="compiled-code">
             <div className="code-actions">
-              <button 
-                className="action-btn"
-                onClick={() => copyToClipboard(compiledCode)}
-              >
-                <Copy size={14} />
-                Copy JS
+              <button className="action-btn" onClick={() => copyToClipboard(compiledCode)}>
+                <Copy size={14} /> Copy JS
               </button>
-              <button 
-                className="action-btn"
-                onClick={() => downloadCode(
-                  currentFile ? currentFile.name.replace(/\.(shona|shonax)$/, '.js') : 'compiled.js', 
-                  compiledCode
-                )}
-              >
-                <Download size={14} />
-                Download JS
+              <button className="action-btn" onClick={() => downloadCode(currentFile ? currentFile.name.replace(/\.(shona|shonax)$/, '.js') : 'compiled.js', compiledCode)}>
+                <Download size={14} /> Download JS
               </button>
             </div>
             <Editor
               height="calc(100% - 40px)"
-              defaultLanguage="javascript"
-              theme="vs-dark"
+              language="javascript"
+              theme={editorTheme}
               value={compiledCode}
+              beforeMount={onEditorWillMount}
               options={{
                 readOnly: true,
                 minimap: { enabled: false },
@@ -140,22 +233,13 @@ const PreviewPanel = ({
               }}
             />
           </div>
-        )}
+        </div>
       </div>
 
       {errors.length > 0 && (
         <div className="error-panel">
-          <div className="error-header">
-            <AlertCircle size={16} />
-            <span>Compilation Errors</span>
-          </div>
-          <div className="error-list">
-            {errors.map((error, index) => (
-              <div key={index} className="error-item">
-                {error}
-              </div>
-            ))}
-          </div>
+          <div className="error-header"><AlertCircle size={16} /><span>Compilation Errors</span></div>
+          <div className="error-list">{errors.map((error, index) => (<div key={index} className="error-item">{error}</div>))}</div>
         </div>
       )}
     </div>

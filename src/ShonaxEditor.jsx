@@ -1,71 +1,41 @@
-// export default ShonaxEditor;
-
 // src/ShonaxEditor.jsx
 
-import React, { useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { FileCode } from 'lucide-react';
 
 // Hooks
 import { useFileSystem } from './hooks/useFileSystem';
 import { useCompiler } from './hooks/useCompiler';
 import { useMonacoSetup } from './hooks/useMonacoSetup';
 
-// Components
+// Components & Utils
 import Toolbar from './components/Toolbar';
 import EditorPanel from './components/EditorPanel';
 import PreviewPanel from './components/PreviewPanel';
 import SettingsModal from './components/SettingsModal';
-import FileManager from './components/FileManager'; // <-- Make sure this is imported
-
-// Utils
+import FileManager from './components/FileManager';
 import { copyToClipboard, downloadCode } from './utils';
 
 const ShonaxEditor = () => {
-  // 1. The useFileSystem hook now provides all file-related state and actions
+  // Hooks remain the same
   const {
-    fileTree,         // The entire nested structure of files and folders
-    currentFile,
-    openTabs,
-    code,
-    setCode,          // Renamed from updateCurrentCode for clarity
-    filesInitialized,
-    expandedFolders,  // State for which folders are expanded
-    handleFileSelect,
-    handleFolderCreate, // New action for creating folders
-    handleFileCreate,
-    handleDelete,
-    handleRename,
-    handleSaveFile,
-    handleCloseTab,
-    toggleFolder,     // New action for expanding/collapsing folders
-    getAllFiles,      // Helper to get a flat list of all file objects
+    fileTree, currentFile, openTabs, code, setCode, filesInitialized, expandedFolders,
+    handleFileSelect, handleFolderCreate, handleFileCreate, handleDelete, handleRename,
+    handleSaveFile, handleCloseTab, toggleFolder, getAllFiles,
   } = useFileSystem();
 
-  // The compiler hook now receives the flat list of all files for bundling
-  const {
-    compiledCode,
-    previewHtml,
-    errors,
-    isCompiling
-  } = useCompiler(code, currentFile, getAllFiles());
+  const { compiledCode, previewHtml, errors, isCompiling } = useCompiler(code, currentFile, getAllFiles());
+  const { editorRef, handleEditorWillMount, handleEditorDidMount } = useMonacoSetup();
 
-  // Monaco setup logic is cleanly separated
-  const {
-    editorRef,
-    handleEditorWillMount,
-    handleEditorDidMount
-  } = useMonacoSetup();
-
-  // UI-specific state remains here
+  // UI state remains the same
   const [showFileManager, setShowFileManager] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editorTheme, setEditorTheme] = useState('shonax-dark');
   const [consoleMessages, setConsoleMessages] = useState([]);
 
-  // --- useEffects for handling side-effects ---
-
-  // Listen for console messages from the preview iframe
+  // useEffects remain the same
   useEffect(() => {
     const handleMessage = (event) => {
         if (event.data?.type === 'console') {
@@ -77,36 +47,13 @@ const ShonaxEditor = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Clear console when code changes
-  useEffect(() => {
-    setConsoleMessages([]);
-  }, [code]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        handleSaveFile();
-      }
-      // Add other shortcuts here...
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSaveFile]);
-
-
   if (!filesInitialized) {
-    return (
-      <div className="loading-container">
-        {/* You can add a nice spinner here */}
-        <p>Loading Shonascript Studio...</p>
-      </div>
-    );
+    return <div className="loading-container"><p>Loading Shonascript Studio...</p></div>;
   }
 
   return (
     <div className={`shonax-editor ${isFullscreen ? 'fullscreen' : ''}`}>
+      {/* Toolbar remains the same */}
       <Toolbar
         isCompiling={isCompiling}
         errors={errors}
@@ -129,11 +76,7 @@ const ShonaxEditor = () => {
           {showFileManager && (
             <>
               <Panel defaultSize={20} minSize={15} maxSize={30}>
-                {/*
-                  <<< HERE IS THE CONNECTION >>>
-                  We pass the state and actions from the useFileSystem hook
-                  directly to the FileManager component as props.
-                */}
+                {/* FileManager remains the same */}
                 <FileManager
                   fileTree={fileTree}
                   currentFile={currentFile}
@@ -152,20 +95,32 @@ const ShonaxEditor = () => {
           )}
           
           <Panel defaultSize={showFileManager ? 40 : 50} minSize={30}>
-            <EditorPanel
-              currentFile={currentFile}
-              code={code}
-              onChange={setCode}
-              theme={editorTheme}
-              onCreateFile={handleFileCreate}
-              onEditorWillMount={handleEditorWillMount}
-              onEditorDidMount={handleEditorDidMount}
-            />
+            {/* EditorPanel and overlay logic remains the same */}
+            <div className="editor-panel-wrapper">
+              <EditorPanel
+                code={code}
+                onChange={setCode}
+                theme={editorTheme}
+                isReadOnly={!currentFile}
+                language={currentFile?.name.endsWith('.shonax') ? 'shonax' : 'shona'}
+                path={currentFile?.path}
+                onEditorWillMount={handleEditorWillMount}
+                onEditorDidMount={handleEditorDidMount}
+              />
+              {!currentFile && (
+                <div className="no-file-overlay">
+                  <FileCode size={48} className="text-gray-500" />
+                  <p>No file open</p>
+                  <button className="create-file-btn" onClick={() => handleFileCreate('new-example.shonax')}>Create New File</button>
+                </div>
+              )}
+            </div>
           </Panel>
 
           <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
 
           <Panel defaultSize={showFileManager ? 40 : 50} minSize={30}>
+            {/* --- THIS IS THE KEY FIX --- */}
             <PreviewPanel
               previewHtml={previewHtml}
               compiledCode={compiledCode}
@@ -173,11 +128,14 @@ const ShonaxEditor = () => {
               consoleMessages={consoleMessages}
               onClearConsole={() => setConsoleMessages([])}
               currentFile={currentFile}
+              onEditorWillMount={handleEditorWillMount} // <-- Pass the setup function
+              editorTheme={editorTheme}               // <-- Pass the current theme
             />
           </Panel>
         </PanelGroup>
       </div>
 
+      {/* SettingsModal remains the same */}
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}

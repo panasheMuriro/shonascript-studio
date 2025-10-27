@@ -2,44 +2,32 @@
 
 import React from 'react';
 import Editor from '@monaco-editor/react';
-import { FileCode } from 'lucide-react';
 
 const EditorPanel = ({
-  currentFile,
   code,
   onChange,
   theme,
-  onCreateFile,
+  isReadOnly, // <-- New prop
+  language,   // <-- New prop
   onEditorWillMount,
-  onEditorDidMount
+  onEditorDidMount,
+  path,       // <-- New prop
 }) => {
-  if (!currentFile) {
-    return (
-      <div className="no-file-selected">
-        <FileCode size={48} />
-        <p>No file selected</p>
-        <button 
-          className="create-file-btn"
-          onClick={() => onCreateFile('new.shonax')}
-        >
-          Create New File
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="editor-panel h-full">
       <Editor
         height="100%"
-        language={currentFile.name.endsWith('.shonax') ? 'shonax' : 'shona'}
+        // If no language, default to plaintext to avoid errors
+        language={language || 'plaintext'}
         theme={theme}
-        value={code}
+        // If no code, show an empty string
+        value={code || ''}
         onChange={onChange}
         beforeMount={onEditorWillMount}
         onMount={onEditorDidMount}
-        path={currentFile.path}
+        path={path}
         options={{
+          readOnly: isReadOnly, // <-- Control read-only state
           minimap: { enabled: false },
           fontSize: 14,
           fontFamily: "'Jetbrains Mono', 'Fira Code', 'Cascadia Code', monospace",
@@ -53,7 +41,7 @@ const EditorPanel = ({
           wordWrap: 'on',
           suggest: {
             showKeywords: true,
-            showSnippets: true
+            showSnippets: true,
           },
           autoClosingBrackets: 'always',
           autoClosingQuotes: 'always',
@@ -65,13 +53,13 @@ const EditorPanel = ({
           quickSuggestions: {
             other: true,
             comments: false,
-            strings: false
+            strings: false,
           },
           acceptSuggestionOnEnter: 'on',
           suggestOnTriggerCharacters: true,
           smartSelect: {
-            selectLeadingAndTrailingWhitespace: false
-          }
+            selectLeadingAndTrailingWhitespace: false,
+          },
         }}
       />
     </div>
