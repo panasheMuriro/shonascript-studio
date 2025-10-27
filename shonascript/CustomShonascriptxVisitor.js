@@ -12,8 +12,11 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
         this.effects = [];   // collected effect functions
         this.effectCounter = 0;
 
+        this.hoistedVars = new Set(); 
+
         this.textNodeCounter = 0;
         this.componentImports = new Map();
+        this.voidTags = new Set(['img', 'br', 'hr', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr']);
 
 
         // Scope management
@@ -53,6 +56,13 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
 
         this.tailwindEnabled = options.tailwind !== false; // Enable by default
 
+        this.updateBlocks = [];        // Stores individual update functions
+        this.dependencies = new Map(); // variable → Set of update block IDs
+        this.currentDeps = new Set();  // Temp storage while visiting expressions
+        this.mountCode = [];           // DOM creation (runs once)
+        this.updateCounter = 0;        // Unique ID for update blocks
+        this.elementRefs = new Map();  // elName → persistent reference
+        this.textNodeRefs = new Map(); // textNode → {parent, expr, deps}
 
 
     }
@@ -61,6 +71,55 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
     =            STATE & HELPER METHODS           =
     ============================================= */
 
+    _getStateAwareAssignable(ctx) {
+        const lhs = this._getAssignableString(ctx);
+
+        // In component mode, prefix bare state variables with $$state.
+        if (this.target === 'component') {
+            const isBareId = /^[a-zA-Z_]\w*$/.test(lhs);
+            if (isBareId && this.scopeStack[0]?.has(lhs)) {
+                return `$$state.${lhs}`;
+            }
+        }
+
+        return lhs;
+    }
+
+    _startTrackingDeps() {
+        this.currentDeps = new Set();
+    }
+
+    _recordDep(varName) {
+        if (this.currentDeps) {
+            this.currentDeps.add(varName);
+        }
+    }
+
+    _finishTrackingDeps() {
+        const deps = this.currentDeps;
+        this.currentDeps = null;
+        return deps;
+    }
+
+    _registerUpdateBlock(code, deps) {
+        const blockId = this.updateCounter++;
+
+        this.updateBlocks.push({
+            id: blockId,
+            code: code,
+            deps: deps
+        });
+
+        // Index by dependency for quick lookup
+        for (const dep of deps) {
+            if (!this.dependencies.has(dep)) {
+                this.dependencies.set(dep, new Set());
+            }
+            this.dependencies.get(dep).add(blockId);
+        }
+
+        return blockId;
+    }
 
     _processTailwindClasses(classString) {
         return classString;
@@ -257,25 +316,32 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
 
     visitProgram(ctx) {
         const isComponent = this.target === 'component';
+
         if (isComponent) {
             this.parentStack = ['root'];
             this.elementCounter = 0;
+            // Reset precision update tracking
+            this.mountCode = [];
+            this.updateBlocks = [];
+            this.dependencies = new Map();
+            this.currentDeps = null;
+            this.updateCounter = 0;
+            this.elementRefs = new Map();
+            this.textNodeRefs = new Map();
         }
 
         if (this.target === 'node' && this.containsFetch(ctx)) {
             this.inAsyncWrapper = true;
         }
 
-        // These arrays store the different parts of the component
-        const emittedLines = [];   // Code that generates the DOM, goes into _render()
-        const componentVars = [];  // Variable/object declarations (`let x = ...`)
-        const componentFns = [];   // Function declarations
-        this.computedCode = [];    // Reactive computations (`tarisa: ...`)
+        const emittedLines = [];
+        const componentVars = [];
+        const componentFns = [];
+        this.computedCode = [];
         let rootElement = null;
 
         // ========================================================================
         // 1. MAIN PROCESSING LOOP
-        // This revised loop explicitly categorizes each top-level program element.
         // ========================================================================
         for (const child of ctx.children ?? []) {
             if (child.symbol?.type === antlr4.Token.EOF || child.constructor.name === 'ErrorNodeImpl') {
@@ -288,64 +354,55 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
                 const line = child.line?.();
                 const stmt = line?.statement?.();
 
-                // Case A: It's a statement line (not HTML)
                 if (stmt) {
                     const simpleStmt = stmt.simpleStatement?.();
                     const compoundStmt = stmt.compoundStatement?.();
 
-                    // Check if it's an assignment (either explicit or as an expression)
                     let isAssignment = false;
                     if (simpleStmt?.assignment?.()) {
                         isAssignment = true;
                     } else if (simpleStmt?.expression?.()) {
-                        // Check if the expression contains an assignment operator
                         const exprText = line.getText();
-                        // Look for = but not ==, !=, <=, >=, =>
                         isAssignment = /^[^=!<>]*=[^=>]/.test(exprText) && !exprText.includes('=>');
                     }
 
-                    // A1: Is it a variable/object declaration?
+                    // A1: Variable/object declaration
                     if (isAssignment || simpleStmt?.linearObjectDefinition?.()) {
                         const code = this.visit(stmt);
                         if (code.trim()) {
-                            // Remove trailing semicolon to avoid double semicolons
                             const cleanCode = code.trim().replace(/;+$/, '');
                             componentVars.push(cleanCode);
                         }
                         handled = true;
                     }
-                    // A2: Is it a function declaration?
+                    // A2: Function declaration
                     else if (compoundStmt?.functionDefinition?.()) {
                         const code = this.visit(compoundStmt.functionDefinition());
                         if (code.trim()) componentFns.push(code);
                         handled = true;
                     }
-                    // A3: Is it a reactive one-liner?
+                    // A3: Reactive one-liner
                     else if (simpleStmt?.reactiveOneLiner?.()) {
-                        this.visit(simpleStmt); // Populates this.computedCode
+                        this.visit(simpleStmt);
                         handled = true;
                     }
                 }
-                // Case B: It's a reactive block
+                // Case B: Reactive block
                 else if (child.reactiveBlock?.()) {
-                    this.visit(child.reactiveBlock()); // Populates this.computedCode
+                    this.visit(child.reactiveBlock());
                     handled = true;
                 }
-                // Case C: It's just a blank line
+                // Case C: Blank line
                 else if (line && !stmt) {
-                    handled = true; // Ignore blank lines
+                    handled = true;
                 }
             }
 
-            // If the child was a declaration (handled = true), we skip it.
-            // If it was not handled, it must be UI content (e.g., an htmlElement)
-            // or we are not in component mode.
             if (!handled) {
                 const code = this.visit(child);
                 if (code) {
                     emittedLines.push(code);
 
-                    // If this is the first root-level HTML element, mark it.
                     if (isComponent && !rootElement && child.htmlElement?.()) {
                         const tagName = child.htmlElement().tagName(0).getText().toLowerCase();
                         if (tagName !== 'style') {
@@ -355,13 +412,10 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
                 }
             }
         }
-        // ========================================================================
-        // END OF PROCESSING LOOP
-        // ========================================================================
 
         const bodyCode = emittedLines.filter(Boolean).join('\n');
 
-        /* ========== 2. HELPER FUNCTIONS (for components) ========== */
+        /* ========== 2. HELPER FUNCTIONS ========== */
         const helpers = isComponent ? `
 function $$createText(data){
     if (data && data.nodeType) return data;
@@ -372,104 +426,200 @@ function $$setAttribute(n,a,v){
     if(a==='value'||a==='checked'||a==='selected'){n[a]=v;}
     else if (v === false || v === null || v === undefined) { n.removeAttribute(a); }
     else{n.setAttribute(a,v);}
+}
+function $$detachListeners(node) {
+    const clone = node.cloneNode(true);
+    node.parentNode?.replaceChild(clone, node);
+    return clone;
 }` : '';
 
-        /* ========== 3. COMPONENT OUTPUT ASSEMBLY ========== */
+        /* ========== 3. COMPONENT OUTPUT WITH PRECISION UPDATES ========== */
         if (isComponent) {
+            // Generate imports
             let importStatements = '';
-    if (this.componentImports.size > 0) {
-        for (const [path, imports] of this.componentImports) {
-            // Clean the path of quotes for uniform processing
-            let importPath = path.replace(/["']/g, '');
+            if (this.componentImports.size > 0) {
+                for (const [path, imports] of this.componentImports) {
+                    let importPath = path.replace(/["']/g, '');
+                    const isLocalFile = importPath.endsWith('.shonax') || importPath.endsWith('.shona');
 
-            // Determine if the path is a local file or a bare module/URL
-            const isLocalFile = importPath.endsWith('.shonax') || importPath.endsWith('.shona');
+                    if (isLocalFile) {
+                        if (!importPath.startsWith('./')) {
+                            importPath = './' + importPath;
+                        }
+                        importPath = importPath.replace(/\.shonax?$/, '.js');
+                    }
 
-            if (isLocalFile) {
-                // It's a local file. Ensure it's treated as a relative path and has a .js extension.
-                if (!importPath.startsWith('./')) {
-                    importPath = './' + importPath;
+                    const parts = [];
+                    if (imports.default) {
+                        parts.push(imports.default);
+                    }
+                    if (imports.named.size > 0) {
+                        const namedList = [...imports.named].sort().join(', ');
+                        parts.push(`{ ${namedList} }`);
+                    }
+
+                    if (parts.length > 0) {
+                        importStatements += `import ${parts.join(', ')} from '${importPath}';\n`;
+                    }
                 }
-                importPath = importPath.replace(/\.shonax?$/, '.js');
             }
-            // ELSE: It's a bare module specifier ("react") or a full URL. We leave it untouched.
-            // The bundler or browser's module loader is responsible for resolving these.
-
-            const parts = [];
-            if (imports.default) {
-                parts.push(imports.default);
-            }
-            if (imports.named.size > 0) {
-                const namedList = [...imports.named].sort().join(', ');
-                parts.push(`{ ${namedList} }`);
-            }
-
-            if (parts.length > 0) {
-                importStatements += `import ${parts.join(', ')} from '${importPath}';\n`;
-            }
-        }
-    }
             if (importStatements) importStatements += '\n';
 
+            // Extract state variables from componentVars
+            const stateVars = [];
+            const stateInitializers = [];
+
+            for (const varDecl of componentVars) {
+                const match = varDecl.match(/^\s*(?:let|const)?\s*(\w+)\s*=\s*(.+)$/);
+                if (match) {
+                    const [, varName, initialValue] = match;
+                    stateVars.push(varName);
+                    stateInitializers.push({ name: varName, value: initialValue });
+                }
+            }
+
+            // Generate reactive state wrappers
+            const reactiveWrappers = stateVars.map(varName => `
+    let _${varName};
+    Object.defineProperty($$state, '${varName}', {
+        get() { return _${varName}; },
+        set(value) {
+            if (_${varName} !== value) {
+                _${varName} = value;
+                $$invalidate('${varName}');
+            }
+        }
+    });`).join('');
+
+            // Generate state initialization
+            const stateInits = stateInitializers.map(init =>
+                `    $$state.${init.name} = ${init.value};`
+            ).join('\n');
+
+            // Props destructuring
             const destructure = this.componentProps.length
-                ? `const { ${this.componentProps.join(', ')} } = props;`
+                ? `    const { ${this.componentProps.join(', ')} } = props;`
                 : '';
-            const varDecls = componentVars.length
-                ? componentVars.map(l => '    ' + l + ';').join('\n')
-                : '';
+
+            // Generate update blocks
+            const updateFunctions = this.updateBlocks.map((block, idx) => {
+                const depsArray = [...block.deps];
+                const dirtyCheck = depsArray.length > 0
+                    ? depsArray.map(d => `$$dirty.${d}`).join(' || ')
+                    : 'false';
+
+                return `
+    function $$update${idx}() {
+        if (${dirtyCheck}) {
+            ${block.code.split('\n').map(line => '            ' + line).join('\n').trim()}
+        }
+    }`;
+            }).join('');
+
+            // Generate update calls
+            const updateCalls = this.updateBlocks.map((_, idx) =>
+                `        $$update${idx}();`
+            ).join('\n');
+
+            // Generate dependency map for debugging
+            const depMap = [];
+            for (const [varName, blockIds] of this.dependencies.entries()) {
+                depMap.push(`        '${varName}': [${[...blockIds].join(', ')}]`);
+            }
+            const depMapStr = depMap.length > 0 ? `{\n${depMap.join(',\n')}\n    }` : '{}';
+
+            // Generate function declarations with proper indentation
             const fnDecls = componentFns.length
                 ? componentFns.map(fn => fn.split('\n').map(l => '    ' + l).join('\n')).join('\n\n')
                 : '';
-            const needsZvanyorwa = bodyCode.includes('zvanyorwa') || varDecls.includes('zvanyorwa');
+
+            // Check if zvanyorwa is needed
+            const needsZvanyorwa = bodyCode.includes('zvanyorwa') ||
+                componentVars.some(v => v.includes('zvanyorwa'));
             const zvanyorwaDecl = needsZvanyorwa ? '    let zvanyorwa;' : '';
-            const indentedBody = bodyCode.split('\n').map(l => '        ' + l).join('\n');
+
+            // Generate mount code
+            const mountCodeStr = this.mountCode.length > 0
+                ? this.mountCode.join('\n').split('\n').map(l => l ? '        ' + l : '').join('\n')
+                : bodyCode.split('\n').map(l => '        ' + l).join('\n');
+
+            // Generate computed code
+            const computedCodeStr = this.computedCode.length > 0
+                ? this.computedCode.map(line => '        ' + line).join('\n')
+                : '';
+
+                const hoistedDecls =
+    [...this.hoistedVars].map(n => `let ${n};`).join('\n    ');
 
             return `${importStatements}${helpers}
 
 export default function ${this.componentName}(props = {}) {
     const root = document.createElement('div');
+    ${hoistedDecls}   
+    /* ================== STATE ================== */
+    const $$state = {};
+    const state    = $$state; 
+    const $$dirty = {};
+    let $$updateScheduled = false;
+    const $$dependencyMap = ${depMapStr};
 
-    ${destructure}
-${varDecls}
+${destructure}
 ${zvanyorwaDecl}
+
+    /* ================== REACTIVE STATE WRAPPERS ================== */
+${reactiveWrappers}
+
+    /* ================== STATE INITIALIZATION ================== */
+${stateInits}
+
+    /* ================== FUNCTIONS ================== */
 ${fnDecls}
 
-    function _runComputations() {
-${this.computedCode.map(line => '        ' + line).join('\n')}
+    /* ================== COMPUTED PROPERTIES ================== */
+    function $$runComputations() {
+${computedCodeStr}
     }
 
-    function _render() {
-        /* remember focus */
-        const activeElem = root.contains(document.activeElement)
-                           ? document.activeElement : null;
-        const activeKey  = activeElem ? activeElem.getAttribute('data-k') : null;
-        const caretStart = activeElem?.selectionStart ?? null;
-        const caretEnd   = activeElem?.selectionEnd   ?? null;
+    /* ================== UPDATE BLOCKS ================== */
+${updateFunctions}
 
-        _runComputations();
-        root.innerHTML = '';
-${indentedBody}
-
-        /* restore focus */
-        if (activeKey) {
-            requestAnimationFrame(() => {
-                const fresh = root.querySelector('[data-k="'+activeKey+'"]');
-                if (fresh && fresh !== document.activeElement) {
-                    fresh.focus({ preventScroll:true });
-                    if (caretStart!==null && caretEnd!==null && fresh.setSelectionRange)
-                        fresh.setSelectionRange(caretStart, caretEnd);
-                }
-            });
+    /* ================== INVALIDATION SYSTEM ================== */
+    function $$invalidate(key) {
+        if (!$$dirty[key]) {
+            $$dirty[key] = true;
+            $$scheduleUpdate();
         }
     }
 
-    const _effects = [_render];
-    function _runEffects() {
-        for (const f of _effects) f();
+    function $$scheduleUpdate() {
+        if (!$$updateScheduled) {
+            $$updateScheduled = true;
+            queueMicrotask(() => $$update());
+        }
     }
 
-    _render(); // Initial render call.
+    function $$update() {
+        $$updateScheduled = false;
+        
+        // Run computations first (they may set more dirty flags)
+        $$runComputations();
+        
+        // Run all update blocks
+${updateCalls}
+        
+        // Clear dirty flags
+        Object.keys($$dirty).forEach(key => $$dirty[key] = false);
+    }
 
+    /* ================== MOUNT (CREATE DOM) ================== */
+    function $$mount() {
+        $$runComputations();
+${mountCodeStr}
+    }
+
+    /* ================== LIFECYCLE ================== */
+    $$mount();
+    
     return root;
 }`;
         }
@@ -499,14 +649,14 @@ ${indentedBody}
                 header += `export { ${globals.join(', ')} };\n\n`;
 
             return header + bodyCode;
-        } else { // Browser Script
+        } else {
+            // Browser Script
             if (this.inAsyncWrapper) {
                 return `(async () => {\n${bodyCode}\n})();`;
             }
-            return bodyCode; // No IIFE for plain browser scripts
+            return bodyCode;
         }
     }
-
     visitArrowFuncSingleParam(ctx) {
         const param = ctx.ID().getText();
         const body = this.visit(ctx.expression());
@@ -702,12 +852,10 @@ ${indentedBody}
     /* =============================================
     =            ASSIGNMENTS & OPERATIONS         =
     ============================================= */
-
-
     visitAssignment(ctx) {
-        /* ---- Guard against <style> misuse ---- */
-        if (ctx.getText().includes('<style'))
+        if (ctx.getText().includes('<style')) {
             throw Error("<style> elements cannot be assigned to variables – they must stay at the top level of the component.");
+        }
 
         if (
             ctx.expression &&
@@ -717,20 +865,17 @@ ${indentedBody}
             const htmlElement = ctx.expression().primaryExpression().htmlElement();
             if (htmlElement) {
                 const tag = htmlElement.tagName(0).getText().toLowerCase();
-                if (tag === 'style')
+                if (tag === 'style') {
                     throw Error("<style> elements cannot be assigned to variables – they must stay at the top level of the component.");
+                }
             }
         }
 
-        /* ---- Build the left-hand side string ---- */
         const lhsString = this._getAssignableString(ctx.assignable());
-
-        /* ---- Auto-declare bare identifiers ---- */
         let decl = '';
         const isBareId = /^[a-zA-Z_]\w*$/.test(lhsString);
 
         if (isBareId && !this.isDeclared(lhsString)) {
-            // In an async node script, top-level lets are handled differently
             if (this.inAsyncWrapper && this.scopeStack.length === 1 && this.target === 'node') {
                 decl = '';
             } else {
@@ -739,31 +884,30 @@ ${indentedBody}
             this.declare(lhsString);
         }
 
-        /* ---- Visit the right-hand side expression ---- */
-        // With the corrected grammar, this now correctly visits the entire
-        // chained expression (e.g., "moment().format('dddd')") as a single unit.
         const rhs = this.visit(ctx.expression());
 
-        /* ---- Return the complete assignment statement ---- */
-        return `${decl}${lhsString} = ${rhs}`;
-    }
+        const finalLhs = this.target === 'component' && isBareId && !decl && this.scopeStack[0]?.has(lhsString)
+            ? `$$state.${lhsString}`
+            : lhsString;
 
+        return `${decl}${finalLhs} = ${rhs}`;
+    }
     visitIncrementStatement(ctx) {
-        const lhs = this._getAssignableString(ctx.assignable());
+        const lhs = this._getStateAwareAssignable(ctx.assignable());
         return `${lhs}++`;
     }
 
     visitDecrementStatement(ctx) {
-        const lhs = this._getAssignableString(ctx.assignable());
+        const lhs = this._getStateAwareAssignable(ctx.assignable());
         return `${lhs}--`;
     }
 
 
     visitCompoundAssignment(ctx) {
-        const lhs = this._getAssignableString(ctx.assignable());
+        const lhs = this._getStateAwareAssignable(ctx.assignable());
         const op = ctx.compoundOp().getText();
         const rhs = this.visit(ctx.expression());
-        return `${lhs} ${op} ${rhs}${this._maybeRunEffects()}`;
+        return `${lhs} ${op} ${rhs}`;
     }
 
     visitReturnStatement(ctx) {
@@ -1010,12 +1154,10 @@ ${indentedBody}
         }) : [];
         const paramString = params.join(", ");
 
-        // Check if this is likely a submit handler
         const isSubmitHandler = params.includes('event') || name.toLowerCase().includes('submit');
 
         let bodyCode = this.visit(ctx.suite());
 
-        // Replace mavalues references with FormData extraction
         if (isSubmitHandler && bodyCode.includes('mavalues')) {
             bodyCode = bodyCode.replace(/mavalues\.(\w+)/g,
                 'Object.fromEntries(new FormData(event.target).entries()).$1');
@@ -1025,20 +1167,12 @@ ${indentedBody}
 
         let finalBody = bodyCode;
 
-        // Add preventDefault for submit handlers
         if (isSubmitHandler && params.includes('event')) {
             finalBody = `${this.getIndent()}    event.preventDefault();\n` + finalBody;
         }
 
-        // In component mode, any mutation should trigger a re-render.
-        if (this.target === 'component') {
-            // const needsEffects = /(\+\+|--|[^=!<>]=(?!=)|\.push\(|\.pop\(|\.shift\(|\.unshift\(|\.splice\()/s.test(bodyCode);
-            const needsEffects = /(\+\+|--|[^=!<>]=(?!=)|\.push\(|\.pop\(|\.shift\(|\.unshift\(|\.splice\(|delete\b)/s.test(bodyCode);
-
-            if (needsEffects) {
-                finalBody += `${this.getIndent()}    _runEffects();\n`;
-            }
-        }
+        // In component mode, mutations should NOT call _runEffects (reactivity handles it)
+        // Remove the old _runEffects logic since we now have $$invalidate
 
         let code;
         if (this.inAsyncWrapper && this.scopeStack.length === 1) {
@@ -1122,179 +1256,260 @@ ${indentedBody}
         return '';
     }
 
+_visitAttributeWithTracking(ctx, elName) {
+    const attrName = this._getAttributeName(ctx);  // Changed from ctx.attrName ? ctx.attrName().getText() : ''
+    const result = { mount: '', update: null, deps: new Set() };
 
-    visitHtmlBlockElement(ctx) {
-        /* ---------- basic info ---------- */
-        const elName = `el${this.elementCounter++}`;
-        const rawTag = ctx.tagName(0).getText();
-        const tagName = rawTag.toLowerCase();
-        const isCustom = /^[A-Z]/.test(rawTag);  // ADD THIS LINE
-        const inExpr = ctx.parentCtx &&
-            ctx.parentCtx.constructor.name === 'HtmlExprContext';
+    /* ─────────────────────────  EVENTS  ───────────────────────── */
+    const eventMap = {
+        rikabayiwa   : 'click',
+        rikasubmitwa : 'submit',
+        ikanyorwa    : 'input',
+        ikachinjwa   : 'change',
+        ikasarudzwa  : 'change',
+        rikapresswa  : 'keypress',
+        rakapresswa  : 'keypress',
+        rakabayiwa   : 'click'
+    };
 
+    if (eventMap[attrName]) {
+        const jsHandler = this.visit(ctx.shonaExpression());
+        const domEvt    = eventMap[attrName];
+        const clean     = jsHandler.replace(/^\$\$state\./, '');
 
-        if (isCustom) {  // ADD THIS BLOCK
-            const kvPairs = [];
+        if (attrName === 'ikanyorwa') {
+            result.mount = `$$listen(${elName}, '${domEvt}', e => {
+                const zvanyorwa = e.target.value;
+                (${clean})(e);
+            });\n`;
+        } else {
+            result.mount = `$$listen(${elName}, '${domEvt}', ${clean});\n`;
+        }
+        return result;
+    }
 
-            // Process attributes as props
-            for (const a of ctx.attribute() || []) {
-                const key = a.attrName
-                    ? a.attrName().getText()
-                    : a.getChild(0).getText();
+    /* ───────────────  TWO-WAY <input>  (zvanyorwa)  ────────────── */
+    if (attrName === 'zvanyorwa') {
+        this._startTrackingDeps();
+        const bindExpr = this.visit(ctx.shonaExpression());  // records deps
+        let   deps     = this._finishTrackingDeps();         
 
-                const val = a.STRING()
-                    ? a.STRING().getText()
-                    : this.visit(a.shonaExpression());
+        /* mount */
+        result.mount = `$$setAttribute(${elName}, 'value', ${bindExpr});\n` +
+                       `$$listen(${elName}, 'input', e => {
+            const zvanyorwa = e.target.value;
+            ${bindExpr} = zvanyorwa;
+        });\n`;
 
-                kvPairs.push(`${key}: ${val}`);
-            }
-
-            // Process children
-            let childrenCode = '';
-            if (ctx.htmlContent()) {
-                this.parentStack.push(elName);
-                this.tagStack.push(tagName);
-
-                // Temporarily change parent to collect children
-                const tempParent = `_children${this.elementCounter}`;
-                const oldParent = this.parentStack[this.parentStack.length - 1];
-                this.parentStack[this.parentStack.length - 1] = tempParent;
-
-                const childContent = this.visit(ctx.htmlContent());
-
-                // Restore parent
-                this.parentStack[this.parentStack.length - 1] = oldParent;
-
-                this.parentStack.pop();
-                this.tagStack.pop();
-
-                if (childContent && childContent.trim()) {
-                    // Wrap children collection
-                    childrenCode = `const ${tempParent} = [];\n${childContent}\n`;
-                    kvPairs.push(`children: ${tempParent}`);
-                }
-            }
-
-            const call = `${rawTag}({ ${kvPairs.join(', ')} })`;
-            const parent = this.parentStack.at(-1);
-
-            if (inExpr) {
-                return `(() => {\n${childrenCode}    return ${call};\n})()`;
-            } else {
-                let code = childrenCode;
-                if (parent && parent !== 'root') {
-                    code += `${parent}.appendChild(${call});\n`;
-                } else {
-                    code += `const ${elName} = ${call};\n`;
-                    if (parent === 'root') {
-                        code += `root.appendChild(${elName});\n`;
-                    }
-                }
-                return code;
-            }
+        /* fallback if tracking missed */
+        if (deps.size === 0) {
+            const m = bindExpr.match(/\$\$state\.([A-Za-z_]\w*)/);
+            if (m) deps = new Set([m[1]]);
         }
 
-        /* ---------- where to append ---------- */
-        const inComponent = this.target === 'component';
-        let parent;
-        if (inExpr) parent = null;
-        else if (tagName === 'style') parent = 'document.head';
-        else parent = this.parentStack.at(-1);
+        /* update */
+        if (deps.size) {
+            result.update = `$$setAttribute(${elName}, 'value', ${bindExpr});`;
+            result.deps   = deps;
+        }
+        return result;
+    }
 
-        /* ---------- create element + stable key ---------- */
-        const key = this._getStableKey(ctx);
-        let code = inExpr
-            ? `(() => {\n    const ${elName} = document.createElement('${tagName}');\n`
-            : `const ${elName} = document.createElement('${tagName}');\n`;
-        code += inExpr
-            ? `    ${elName}.setAttribute('data-k', '${key}');\n`
-            : `${elName}.setAttribute('data-k', '${key}');\n`;
+    /* ───────────────  TWO-WAY <select>  (zvasarudzwa)  ─────────── */
+    if (attrName === 'zvasarudzwa') {
+        this._startTrackingDeps();
+        const bindExpr = this.visit(ctx.shonaExpression());
+        let   deps     = this._finishTrackingDeps();
 
-        /* ---------- attributes ---------- */
-        const attrs = ctx.attribute() || [];
-        let hasExplicitValue = false;
-        let selectBindExpr = null;      // remember zvasarudzwa expr
+        result.mount = `$$setAttribute(${elName}, 'value', ${bindExpr});\n` +
+                       `$$listen(${elName}, 'change', e => {
+            ${bindExpr} = e.target.value;
+        });\n`;
 
-        for (const a of attrs) {
-            const aName = a.attrName ? a.attrName().getText() : '';
-            if (aName === 'value') hasExplicitValue = true;
-            if (aName === 'zvasarudzwa') selectBindExpr = this.visit(a.shonaExpression());
-
-            const snip = this.visitAttribute(a, elName);
-            if (!snip) continue;
-            code += inExpr
-                ? snip.split('\n').filter(Boolean).map(l => '    ' + l).join('\n') + '\n'
-                : snip;
+        if (deps.size === 0) {
+            const m = bindExpr.match(/\$\$state\.([A-Za-z_]\w*)/);
+            if (m) deps = new Set([m[1]]);
         }
 
-        /* ---------- auto id for form fields ---------- */
-        if (['input', 'textarea', 'select'].includes(tagName)) {
-            const already = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
-            if (!already) {
-                code += inExpr
-                    ? `    ${elName}.id = 'input_${this.elementCounter}';\n`
-                    : `${elName}.id = 'input_${this.elementCounter}';\n`;
-            }
+        if (deps.size) {
+            result.update = `$$setAttribute(${elName}, 'value', ${bindExpr});`;
+            result.deps   = deps;
+        }
+        return result;
+    }
+
+    /* ──────────────────────  STATIC ATTR  ─────────────────────── */
+    if (ctx.STRING()) {
+        const real = attrName === 'className' ? 'class' : attrName;
+        const val  = ctx.STRING().getText();
+        result.mount = `$$setAttribute(${elName}, '${real}', ${val});\n`;
+        return result;
+    }
+
+    /* ─────────────────────  DYNAMIC ATTR  ─────────────────────── */
+    this._startTrackingDeps();
+    const value = this.visit(ctx.shonaExpression());
+    const deps  = this._finishTrackingDeps();
+    const real  = attrName === 'className' ? 'class' : attrName;
+
+    result.mount = `$$setAttribute(${elName}, '${real}', ${value});\n`;
+    if (deps.size) {
+        result.update = `$$setAttribute(${elName}, '${real}', ${value});`;
+        result.deps   = deps;
+    }
+    return result;
+}
+
+visitHtmlBlockElement(ctx) {
+    /* ───────────────  bookkeeping  ─────────────── */
+    const elName  = `el${this.elementCounter++}`;         // variable that refers to the element
+    const rawTag  = ctx.tagName(0).getText();             // exactly as in template
+    const tagName = rawTag.toLowerCase();                 // normalised
+    const key     = this._getStableKey(ctx);              // data-k for diff/debug
+    const isCustom = /^[A-Z]/.test(rawTag);               // <MyWidget>
+
+    /* =======================================================================
+       1.  CUSTOM COMPONENT  (<MyWidget …>)
+       ======================================================================= */
+    if (isCustom) {
+        const kvPairs = [];
+
+        for (const a of ctx.attribute() || []) {
+            const attrKey = a.attrName ? a.attrName().getText()
+                                       : a.getChild(0).getText();   // shorthand  {expr}
+            const val = a.STRING() ? a.STRING().getText()
+                                   : this.visit(a.shonaExpression());
+            kvPairs.push(`${attrKey}: ${val}`);
         }
 
-        /* ---------- children ---------- */
-        const isVoid = this.voidTags?.has(tagName);          // <- needs voidTags Set
-        if (!isVoid) {
+        /* optional children → gathered in a temporary array */
+        let childSnippet = '';
+        if (ctx.htmlContent()) {
             this.parentStack.push(elName);
             this.tagStack.push(tagName);
-        }
 
-        let childrenCode = '';
+            const tmpArr = `_children${this.elementCounter}`;
+            const former = this.parentStack[this.parentStack.length - 1];
+            this.parentStack[this.parentStack.length - 1] = tmpArr;
 
-        /* text-only <option> */
-        if (tagName === 'option' && !ctx.htmlContent()) {
-            const m = ctx.getText().match(/>([\s\S]*?)<\/option/i);
-            const txt = (m ? m[1] : '').trim();
-            if (txt) {
-                const esc = txt.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-                const line = `${elName}.appendChild($$createText(\`${esc}\`));\n`;
-                childrenCode += inExpr ? '    ' + line : line;
-            }
-        }
+            const contentCode = this.visit(ctx.htmlContent());
 
-        /* normal inner html */
-        if (ctx.htmlContent()) {
-            let inner = this.visit(ctx.htmlContent());
-            if (inner) {
-                inner = inExpr
-                    ? inner.split('\n').filter(Boolean).map(l => '    ' + l).join('\n') + '\n'
-                    : inner;
-                childrenCode += inner;
-            }
-
-            /* default value for <option> without explicit value */
-            if (tagName === 'option' && !hasExplicitValue) {
-                const fix = `if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`;
-                childrenCode += inExpr ? '    ' + fix : fix;
-            }
-        }
-
-        if (!isVoid) {
+            this.parentStack[this.parentStack.length - 1] = former;
             this.parentStack.pop();
             this.tagStack.pop();
+
+            if (contentCode.trim()) {
+                childSnippet = `const ${tmpArr} = [];\n${contentCode}\n`;
+                kvPairs.push(`children: ${tmpArr}`);
+            }
         }
 
-        /* ---------- assemble ---------- */
-        if (inExpr) {
-            code += childrenCode;
-            if (tagName === 'select' && selectBindExpr)
-                code += `    ${elName}.value = ${selectBindExpr};\n`;
-            code += `    return ${elName};\n})();`;
-            return code;
+        const ctor = `${rawTag}({ ${kvPairs.join(', ')} })`;
+        const parent = this.parentStack.at(-1);
+
+        let mount = childSnippet;
+        if (parent && parent !== 'root') {
+            mount += `${parent}.appendChild(${ctor});\n`;
         } else {
-            code += childrenCode;
-            if (tagName === 'select' && selectBindExpr)
-                code += `${elName}.value = ${selectBindExpr};\n`;
-            if (parent) code += `${parent}.appendChild(${elName});\n`;
-            return code;
+            mount += `const ${elName} = ${ctor};\n`;
+            if (parent === 'root') mount += `root.appendChild(${elName});\n`;
+        }
+
+        if (parent === 'root') this.mountCode.push(mount);
+        return { mount, element: elName };
+    }
+
+    /* =======================================================================
+       2.  NATIVE ELEMENT
+       ======================================================================= */
+
+    /* ---------- 2-a  : hoisting decision -------------------------------- */
+    const attrs = ctx.attribute() || [];
+    let needsHoist = false;
+
+    // Any two-way binding attribute forces hoisting immediately
+    for (const a of attrs) {
+        const n = a.attrName ? a.attrName().getText() : '';
+        if (n === 'zvanyorwa' || n === 'zvasarudzwa') {
+            needsHoist = true;
+            this.hoistedVars.add(elName);
+            break;
         }
     }
 
+    /* ---------- 2-b : process attributes, gather mount/update code ------ */
+    const attrResults = [];
+    for (const a of attrs) {
+        const res = this._visitAttributeWithTracking(a, elName);
+        attrResults.push(res);
+
+        if (!needsHoist && res.update && res.deps && res.deps.size) {
+            needsHoist = true;
+            this.hoistedVars.add(elName);
+        }
+    }
+
+    /* ---------- 2-c : create the element -------------------------------- */
+    let mount = '';
+    mount += needsHoist
+        ? `${elName} = document.createElement('${tagName}');\n`
+        : `const ${elName} = document.createElement('${tagName}');\n`;
+    mount += `${elName}.setAttribute('data-k', '${key}');\n`;
+
+    this.elementRefs.set(elName, { tag: tagName, key });
+
+    /* ---------- 2-d : apply attributes / register update blocks --------- */
+    for (const r of attrResults) {
+        if (r.mount) mount += r.mount;
+        if (r.update && r.deps && r.deps.size)
+            this._registerUpdateBlock(r.update, r.deps);
+    }
+
+    /* ---------- 2-e : auto-id for form fields --------------------------- */
+    if (['input', 'textarea', 'select'].includes(tagName)) {
+        const hasId = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
+        if (!hasId) mount += `${elName}.id = 'input_${this.elementCounter}';\n`;
+    }
+
+    /* ---------- 2-f : children ------------------------------------------ */
+    if (!this.voidTags.has(tagName)) {
+        this.parentStack.push(elName);
+        this.tagStack.push(tagName);
+
+        if (ctx.htmlContent()) {
+            const kids = this.visit(ctx.htmlContent());
+            if (kids.trim()) mount += kids;
+        } else if (tagName === 'option') {
+            const m = ctx.getText().match(/>([\s\S]*?)<\/option/i);
+            const txt = m ? m[1].trim() : '';
+            if (txt) mount += `${elName}.appendChild($$createText(\`${txt.replace(/`/g, '\\`')}\`));\n`;
+        }
+
+        /* <option> default value fallback */
+        if (tagName === 'option') {
+            const hasVal = attrs.some(a => a.attrName && a.attrName().getText() === 'value');
+            if (!hasVal) mount += `if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`;
+        }
+
+        this.parentStack.pop();
+        this.tagStack.pop();
+    }
+
+    /* ---------- 2-g : append to parent ---------------------------------- */
+    const parent = this.parentStack.at(-1);
+    if (tagName === 'style') {
+        mount += `document.head.appendChild(${elName});\n`;
+    } else if (parent === 'root') {
+        mount += `root.appendChild(${elName});\n`;
+    } else if (parent) {
+        mount += `${parent}.appendChild(${elName});\n`;
+    }
+
+    /* ---------- 2-h : store at top-level if root ------------------------- */
+    if (parent === 'root') this.mountCode.push(mount);
+
+    return { mount, element: elName };
+}
     visitHtmlExpr(ctx) {
         // Only allow in component mode
         if (this.target !== 'component') {
@@ -1304,58 +1519,165 @@ ${indentedBody}
         }
         return this.visit(ctx.htmlElement());   // returns the IIFE string
     }
+    // visitHtmlSelfClosingElement(ctx) {
+    //     const elName = `el${this.elementCounter++}`;
+    //     const rawTag = ctx.tagName().getText();
+    //     const tagName = rawTag.toLowerCase();
+    //     if (tagName === 'style')
+    //         throw Error('<style> cannot be self-closing – write <style>…</style>.');
+
+    //     const stableKey = this._getStableKey(ctx);
+    //     const isCustom = /^[A-Z]/.test(rawTag);
+    //     const inComp = this.target === 'component';
+    //     let parent = inComp ? (this.parentStack.at(-1) === 'root' ? null : this.parentStack.at(-1))
+    //         : this.parentStack.at(-1);
+
+    //     /* ---- custom component (unchanged) ---- */
+
+    //     if (isCustom) {
+    //         const kvPairs = [];
+
+    //         for (const a of ctx.attribute() || []) {
+    //             const key = a.attrName
+    //                 ? a.attrName().getText()
+    //                 : a.getChild(0).getText();
+
+    //             const val = a.STRING()
+    //                 ? a.STRING().getText()
+    //                 : this.visit(a.shonaExpression());
+
+    //             kvPairs.push(`${key}: ${val}`);
+    //         }
+
+    //         const call = `${rawTag}({ ${kvPairs.join(', ')} })`;
+
+    //         if (parent)
+    //             return `${parent}.appendChild(${call});\n`;
+
+    //         return `const ${elName} = ${call};\n`;
+    //     }
+
+    //     /* ---- native element ---- */
+    //     let code = `const ${elName} = document.createElement('${tagName}');\n`;
+    //     code += `${elName}.setAttribute('data-k', '${stableKey}');\n`;
+
+    //     for (const a of ctx.attribute() || []) {
+    //         const snip = this.visitAttribute(a, elName);
+    //         if (snip) code += snip;
+    //     }
+
+    //     if (parent) code += `${parent}.appendChild(${elName});\n`;
+    //     return code;
+    // }
+
     visitHtmlSelfClosingElement(ctx) {
-        const elName = `el${this.elementCounter++}`;
-        const rawTag = ctx.tagName().getText();
-        const tagName = rawTag.toLowerCase();
-        if (tagName === 'style')
-            throw Error('<style> cannot be self-closing – write <style>…</style>.');
+    const elName  = `el${this.elementCounter++}`;
+    const rawTag  = ctx.tagName().getText();
+    const tagName = rawTag.toLowerCase();
 
-        const stableKey = this._getStableKey(ctx);
-        const isCustom = /^[A-Z]/.test(rawTag);
-        const inComp = this.target === 'component';
-        let parent = inComp ? (this.parentStack.at(-1) === 'root' ? null : this.parentStack.at(-1))
-            : this.parentStack.at(-1);
+    if (tagName === 'style')
+        throw Error('<style> cannot be self-closing – write <style>…</style>.');
 
-        /* ---- custom component (unchanged) ---- */
+    const key = this._getStableKey(ctx);
+    const isCustom = /^[A-Z]/.test(rawTag);
 
-        if (isCustom) {
-            const kvPairs = [];
-
-            for (const a of ctx.attribute() || []) {
-                const key = a.attrName
-                    ? a.attrName().getText()
-                    : a.getChild(0).getText();
-
-                const val = a.STRING()
-                    ? a.STRING().getText()
-                    : this.visit(a.shonaExpression());
-
-                kvPairs.push(`${key}: ${val}`);
-            }
-
-            const call = `${rawTag}({ ${kvPairs.join(', ')} })`;
-
-            if (parent)
-                return `${parent}.appendChild(${call});\n`;
-
-            return `const ${elName} = ${call};\n`;
-        }
-
-        /* ---- native element ---- */
-        let code = `const ${elName} = document.createElement('${tagName}');\n`;
-        code += `${elName}.setAttribute('data-k', '${stableKey}');\n`;
-
+    /* ───────────── custom component (unchanged) ───────────── */
+    if (isCustom) {
+        const kv = [];
         for (const a of ctx.attribute() || []) {
-            const snip = this.visitAttribute(a, elName);
-            if (snip) code += snip;
+            const k = a.attrName ? a.attrName().getText() : a.getChild(0).getText();
+            const v = a.STRING()   ? a.STRING().getText()
+                                   : this.visit(a.shonaExpression());
+            kv.push(`${k}: ${v}`);
         }
-
-        if (parent) code += `${parent}.appendChild(${elName});\n`;
-        return code;
+        const call   = `${rawTag}({ ${kv.join(', ')} })`;
+        const parent = this.parentStack.at(-1);
+        return parent
+            ? `${parent}.appendChild(${call});\n`
+            : `const ${elName} = ${call};\n`;
     }
 
+    /* ───────────── native element ───────────── */
+    const attrs = ctx.attribute() || [];
+    let needsHoist = false;
 
+    /* pre-scan for two-way binding */
+    for (const a of attrs) {
+        const n = a.attrName ? a.attrName().getText() : '';
+        if (n === 'zvanyorwa' || n === 'zvasarudzwa') {
+            needsHoist = true;
+            this.hoistedVars.add(elName);
+            break;
+        }
+    }
+
+    /* handle every attribute with tracking */
+    const attrResults = [];
+    for (const a of attrs) {
+        const r = this._visitAttributeWithTracking(a, elName);
+        attrResults.push(r);
+
+        if (!needsHoist && r.update && r.deps && r.deps.size) {
+            needsHoist = true;
+            this.hoistedVars.add(elName);
+        }
+    }
+
+    /* build mount code */
+    let code = '';
+    code += needsHoist
+        ? `${elName} = document.createElement('${tagName}');\n`
+        : `const ${elName} = document.createElement('${tagName}');\n`;
+    code += `${elName}.setAttribute('data-k', '${key}');\n`;
+
+    for (const r of attrResults) {
+        if (r.mount)  code += r.mount;
+        if (r.update && r.deps && r.deps.size)
+            this._registerUpdateBlock(r.update, r.deps);
+    }
+
+    /* auto-id for form controls */
+    if (['input','textarea','select'].includes(tagName)) {
+        const hasId = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
+        if (!hasId) code += `${elName}.id = 'input_${this.elementCounter}';\n`;
+    }
+
+    /* append to parent */
+    const parent = this.parentStack.at(-1);
+    if (parent) code += `${parent}.appendChild(${elName});\n`;
+
+    /* if we’re at root level, push into global mount array */
+    if (parent === 'root') this.mountCode.push(code);
+
+    return code;          // returned string is inserted by caller
+}
+
+_getAttributeName(ctx) {
+    if (!ctx.attrName) return '';
+    
+    const attrNameCtx = ctx.attrName();
+    
+    // Handle special keywords
+    const specialAttrs = ['EVENT_CLICK', 'EVENT_SUBMIT', 'EVENT_CHANGE', 
+                         'CLASS', 'ZVANYORWA', 'IKANYORWA', 'IKASARUDZWA', 'ZVASARUDZWA'];
+    
+    for (const attr of specialAttrs) {
+        if (attrNameCtx[attr] && attrNameCtx[attr]()) {
+            return attrNameCtx[attr]().getText();
+        }
+    }
+    
+    // Handle ID with potential hyphens
+    if (attrNameCtx.ID && attrNameCtx.ID()) {
+        const ids = attrNameCtx.ID();
+        if (Array.isArray(ids)) {
+            return ids.map(id => id.getText()).join('-');
+        }
+        return ids.getText();
+    }
+    
+    return attrNameCtx.getText();
+}
 
     visitInlineNestedObj(ctx) {
         const objName = ctx.ID().getText();
@@ -1384,11 +1706,10 @@ ${indentedBody}
 
     /** Handle every HTML attribute (events, bindings, …) */
     visitAttribute(ctx, elName) {
-        const attrName = ctx.attrName ? ctx.attrName().getText() : '';
+        // const attrName = ctx.attrName ? ctx.attrName().getText() : '';
+          const attrName = this._getAttributeName(ctx);  
 
-        /* ────────────────────────────────
-           1.  EVENT ATTRIBUTES
-           ──────────────────────────────── */
+        // EVENT HANDLERS
         const eventMap = {
             rikasubmitwa: 'submit',
             rikabayiwa: 'click',
@@ -1399,11 +1720,11 @@ ${indentedBody}
             ikanyorwa: 'input',
             ikasarudzwa: 'change'
         };
+
         if (eventMap[attrName]) {
             const jsHandler = this.visit(ctx.shonaExpression());
             const domEvent = eventMap[attrName];
 
-            /* special case  ikanyorwa  → inject zvanyorwa = e.target.value */
             if (attrName === 'ikanyorwa') {
                 return `$$listen(${elName}, '${domEvent}', e => {
                 zvanyorwa = e.target.value;
@@ -1411,40 +1732,32 @@ ${indentedBody}
             });\n`;
             }
 
-            /* normal custom handler */
-            return `$$listen(${elName}, '${domEvent}', ${jsHandler});\n`;
+            // return `$$listen(${elName}, '${domEvent}', ${jsHandler});\n`;
+        const cleanHandler = jsHandler.replace(/^\$\$state\./, '');
+return `$$listen(${elName}, '${domEvent}', ${cleanHandler});\n`;
         }
 
-        /* ────────────────────────────────
-           2.  TWO-WAY TEXT INPUT binding  ( zvanyorwa )
-           ──────────────────────────────── */
+        // TWO-WAY BINDINGS - these now work through reactive setters
         if (attrName === 'zvanyorwa') {
             const bindExpr = this.visit(ctx.shonaExpression());
             let code = `$$setAttribute(${elName}, 'value', ${bindExpr});\n`;
             code += `$$listen(${elName}, 'input', e => {
             const zvanyorwa = e.target.value;
             ${bindExpr} = zvanyorwa;
-            _runEffects();
         });\n`;
             return code;
         }
 
-        /* ────────────────────────────────
-           3.  TWO-WAY SELECT binding      ( zvasarudzwa )
-           ──────────────────────────────── */
         if (attrName === 'zvasarudzwa') {
             const bindExpr = this.visit(ctx.shonaExpression());
             let code = `$$setAttribute(${elName}, 'value', ${bindExpr});\n`;
             code += `$$listen(${elName}, 'change', e => {
             ${bindExpr} = e.target.value;
-            _runEffects();
         });\n`;
             return code;
         }
 
-        /* ────────────────────────────────
-           4.  NORMAL ATTRIBUTE
-           ──────────────────────────────── */
+        // NORMAL ATTRIBUTE
         let realAttr = attrName === 'className' ? 'class' : attrName;
         const value = ctx.STRING()
             ? ctx.STRING().getText()
@@ -1463,49 +1776,46 @@ ${indentedBody}
             const result = this.visitHtmlContentElement(element);
 
             if (result) {
+                // Result is now always a string (mount code)
                 results.push(result);
 
-                // Check if we need to add a space between elements
+                // Spacing logic
                 if (i + 1 < elements.length) {
                     const nextElement = elements[i + 1];
 
-                    // Add space between text and expression
                     if (element.htmlText && element.htmlText() &&
                         nextElement.shonaExpression && nextElement.shonaExpression()) {
                         const parent = this.parentStack.at(-1);
-                        results.push(`${parent}.appendChild($$createText(' '));`);
+                        results.push(`${parent}.appendChild($$createText(' '));\n`);
                     }
 
-                    // Add space between expression and expression
                     if (element.shonaExpression && element.shonaExpression() &&
                         nextElement.shonaExpression && nextElement.shonaExpression()) {
                         const parent = this.parentStack.at(-1);
-                        results.push(`${parent}.appendChild($$createText(' '));`);
+                        results.push(`${parent}.appendChild($$createText(' '));\n`);
                     }
 
-                    // Add space between expression and text (but not before punctuation)
                     if (element.shonaExpression && element.shonaExpression() &&
                         nextElement.htmlText && nextElement.htmlText()) {
-                        // Check if the next text doesn't already start with a space or punctuation
                         const nextTextCtx = nextElement.htmlText();
                         const start = nextTextCtx.start.start;
                         const stop = nextTextCtx.stop.stop;
                         const inputStream = nextTextCtx.start.getInputStream();
                         const nextText = inputStream.getText(start, stop);
 
-                        // Don't add space if text starts with space or punctuation
                         const punctuation = /^[\s,;:.!?)`}\]]/;
 
                         if (nextText && !nextText.match(punctuation)) {
                             const parent = this.parentStack.at(-1);
-                            results.push(`${parent}.appendChild($$createText(' '));`);
+                            results.push(`${parent}.appendChild($$createText(' '));\n`);
                         }
                     }
                 }
             }
         }
 
-        return results.filter(Boolean).join('\n');
+        // Return concatenated string, not joined with \n (already has \n in each piece)
+        return results.filter(Boolean).join('');
     }
 
     visitHtmlConditionalStatement(ctx) {
@@ -1574,6 +1884,20 @@ ${indentedBody}
     }
 
 
+    _generateReactiveWrapper(varName) {
+        return `
+let _${varName};
+Object.defineProperty(_state, '${varName}', {
+    get() { return _${varName}; },
+    set(value) { 
+        if (_${varName} !== value) {
+            _${varName} = value; 
+            _invalidate('${varName}'); 
+        }
+    }
+});`;
+    }
+
     visitHtmlContentElement(ctx) {
         // 1. Control flow ONLY from inside {}
         if (ctx.shonaControlFlow && ctx.shonaControlFlow()) {
@@ -1582,25 +1906,46 @@ ${indentedBody}
 
         // 2. Expression inside {}
         if (ctx.shonaExpression && ctx.shonaExpression()) {
+            this._startTrackingDeps();
             const expr = this.visit(ctx.shonaExpression().expression());
+            const deps = this._finishTrackingDeps();
+
             const parent = this.parentStack.at(-1);
-            return `${parent}.appendChild($$createText(${expr}));`;
+            const textName = `text${this.textNodeCounter++}`;
+            this.hoistedVars.add(textName);
+
+            // Mount code - DON'T push to this.mountCode, return it instead
+            const mountCode = `${textName} = $$createText(${expr});\n` +
+                `${parent}.appendChild(${textName});\n`;
+
+            // Update block
+            if (deps && deps.size > 0) {
+                const dirtyChecks = [...deps].map(d => `$$dirty.${d}`).join(' || ');
+                const updateCode = `if (${dirtyChecks}) {
+                ${textName}.data = ${expr};
+            }`;
+                this._registerUpdateBlock(updateCode, deps);
+            }
+
+            // Return mount code for parent to include
+            return mountCode;
         }
 
         // 3. Nested HTML element
         if (ctx.htmlElement && ctx.htmlElement()) {
-            return this.visit(ctx.htmlElement());
+            const result = this.visit(ctx.htmlElement());
+            // If it's an object with .mount, extract the mount code
+            return result && typeof result === 'object' && result.mount ? result.mount : result;
         }
 
         // 4. Whitespace
         if (ctx.WS_IN_HTML && ctx.WS_IN_HTML()) {
             const parent = this.parentStack.at(-1);
-            return `${parent}.appendChild($$createText(' '));`;
+            return `${parent}.appendChild($$createText(' '));\n`;
         }
 
         // 5. HTML text - get the complete text with spaces
         if (ctx.htmlText && ctx.htmlText()) {
-            // Use the visitor to get the properly reconstructed text
             const text = this.visit(ctx.htmlText());
 
             if (text) {
@@ -1610,7 +1955,7 @@ ${indentedBody}
                     .replace(/`/g, '\\`')
                     .replace(/\$/g, '\\$');
 
-                return `${parent}.appendChild($$createText(\`${escaped}\`));`;
+                return `${parent}.appendChild($$createText(\`${escaped}\`));\n`;
             }
         }
 
@@ -1642,51 +1987,49 @@ ${indentedBody}
     }
 
     visitConditionalInHtml(ctx) {
+        const anchorName = `anchor${this.elementCounter++}`;
+        const blockName = `if_block${this.elementCounter++}`;
+
+        this._startTrackingDeps();
         const condition = this.visit(ctx.expression(0));
-        const cleanCondition = condition.startsWith('(') && condition.endsWith(')')
-            ? condition.slice(1, -1)
-            : condition;
+        const deps = this._finishTrackingDeps();
 
-        let code = `if (${cleanCondition}) {\n`;
-        this.enterScope();
+        // Mount
+        const mountCode = `
+    const ${anchorName} = document.createComment('if');
+    ${this.parentStack.at(-1)}.appendChild(${anchorName});
+    let ${blockName} = null;
+    `;
 
-        // Visit the first branch content
-        if (ctx.htmlContentUntilKeyword) {
-            code += this.visit(ctx.htmlContentUntilKeyword(0));
-        }
+        this.mountCode.push(mountCode);
 
-        this.leaveScope();
-        code += '\n' + this.getIndent() + '}';
+        // Update function
+        const dirtyChecks = [...deps].map(d => `$$dirty.${d}`).join(' || ');  // ← Fixed
 
-        // Handle else-if branches
-        const elseIfs = ctx.KUTI() || [];
-        for (let i = 0; i < elseIfs.length; i++) {
-            const elseIfCondition = this.visit(ctx.expression(i + 1));
-            const cleanElseIfCond = elseIfCondition.startsWith('(') && elseIfCondition.endsWith(')')
-                ? elseIfCondition.slice(1, -1)
-                : elseIfCondition;
+        // Generate the true branch
+        this.parentStack.push(anchorName + '.parentNode');
+        const trueContent = this.visit(ctx.htmlContentUntilKeyword(0));
+        this.parentStack.pop();
 
-            code += ` else if (${cleanElseIfCond}) {\n`;
-            this.enterScope();
-            if (ctx.htmlContentUntilKeyword(i + 1)) {
-                code += this.visit(ctx.htmlContentUntilKeyword(i + 1));
+        const updateCode = `
+    if (${dirtyChecks}) {
+        if (${condition}) {
+            if (!${blockName}) {
+                ${blockName} = document.createDocumentFragment();
+                ${trueContent.mount}
+                ${anchorName}.parentNode.insertBefore(${blockName}, ${anchorName});
             }
-            this.leaveScope();
-            code += '\n' + this.getIndent() + '}';
-        }
-
-        // Handle else branch
-        if (ctx.ZVIMWE()) {
-            code += ` else {\n`;
-            this.enterScope();
-            if (ctx.htmlContentToEnd) {
-                code += this.visit(ctx.htmlContentToEnd());
+        } else {
+            if (${blockName}) {
+                ${blockName}.remove();
+                ${blockName} = null;
             }
-            this.leaveScope();
-            code += '\n' + this.getIndent() + '}';
         }
+    }`;
 
-        return code;
+        this._registerUpdateBlock(updateCode, deps);
+
+        return { mount: mountCode };
     }
 
 
@@ -1733,25 +2076,61 @@ ${indentedBody}
 
     visitLoopInHtml(ctx) {
         const item = ctx.ID().getText();
-        const collection = this.visit(ctx.primaryExpression());
+        const collectionExpr = this.visit(ctx.expression());
+        const anchorName = `each_anchor${this.elementCounter++}`;
+        const blocksName = `each_blocks${this.elementCounter++}`;
 
-        this.loopDepth++;
-        this.enterScope();
-        this.declare(item);
+        this._startTrackingDeps();
+        ctx.expression().accept(this);
+        const deps = this._finishTrackingDeps();
 
-        let code = `for (let ${item} of ${collection}) {\n`;
+        // Mount
+        const mountCode = `
+    const ${anchorName} = document.createComment('each');
+    ${this.parentStack.at(-1)}.appendChild(${anchorName});
+    const ${blocksName} = [];
+    `;
 
-        // Visit htmlContentToEnd instead of htmlSuite
-        if (ctx.htmlContentToEnd && ctx.htmlContentToEnd()) {
-            code += this.visit(ctx.htmlContentToEnd());
+        this.mountCode.push(mountCode);
+
+        // Generate item template function
+        this.parentStack.push('fragment');
+        const itemContent = this.visit(ctx.htmlContentToEnd());
+        this.parentStack.pop();
+
+        const createItemFn = `
+    function _create_${blocksName}_item(${item}) {
+        const fragment = document.createDocumentFragment();
+        ${itemContent.mount}
+        return fragment;
+    }`;
+
+        this.mountCode.push(createItemFn);
+
+        // Update function
+        const dirtyChecks = [...deps].map(d => `$$dirty.${d}`).join(' || ');  // ← Fixed
+        const updateCode = `
+    if (${dirtyChecks}) {
+        const items = ${collectionExpr};
+        
+        // Remove excess blocks
+        while (${blocksName}.length > items.length) {
+            ${blocksName}.pop().remove();
         }
+        
+        // Update/create blocks
+        items.forEach((${item}, i) => {
+            if (i >= ${blocksName}.length) {
+                const block = _create_${blocksName}_item(${item});
+                ${blocksName}.push(block);
+                ${anchorName}.parentNode.insertBefore(block, ${anchorName});
+            }
+        });
+    }`;
 
-        code += this.getIndent() + "}";
+        this._registerUpdateBlock(updateCode, deps);
 
-        this.leaveScope();
-        this.loopDepth--;
-
-        return this.removeTrailingCommas(code);
+        return { mount: mountCode };
     }
 
     visitWhileInHtml(ctx) {
@@ -2476,9 +2855,20 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
         return `(${result})`;
     }
 
+    // visitUnaryExpression(ctx) {
+    //     return this.visit(ctx.getChild(0));
+    // }
+
     visitUnaryExpression(ctx) {
+    // no operator  → just recurse
+    if (ctx.getChildCount() === 1) {
         return this.visit(ctx.getChild(0));
     }
+
+    // operator + operand
+    const op   = ctx.getChild(0).getText();   //  '!', '+', '-'
+    const expr = this.visit(ctx.getChild(1)); //  the real sub-expression
+    return `${op}${expr}`;}
 
     visitUnaryOp(ctx) {
         const op = ctx.getChild(0).getText();
@@ -2487,13 +2877,13 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
     }
 
     visitPostfixIncExpr(ctx) {
-        const lhs = this._getAssignableString(ctx.assignable());
-        return `${lhs}++${this._maybeRunEffects()}`;
+        const lhs = this._getStateAwareAssignable(ctx.assignable());
+        return `${lhs}++`;
     }
 
     visitPostfixDecExpr(ctx) {
-        const lhs = this._getAssignableString(ctx.assignable());
-        return `${lhs}--${this._maybeRunEffects()}`;
+        const lhs = this._getStateAwareAssignable(ctx.assignable());
+        return `${lhs}--`;
     }
 
     visitPrimaryExpr(ctx) {
@@ -2845,13 +3235,15 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
     visitVariable(ctx) {
         const name = ctx.ID().getText();
 
-        // Check if zvanyorwa is being used
+        // Record this variable access for dependency tracking (only in component mode)
+        if (this.target === 'component' && this.currentDeps) {
+            this._recordDep(name);
+        }
+
         if (name === 'zvanyorwa') {
-            // In the context of an event handler, zvanyorwa should be available
             return 'zvanyorwa';
         }
 
-        /* Inside an object-method? */
         if (
             this.objectPropsStack.length &&
             this.currentFunction !== null &&
@@ -2860,12 +3252,15 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
             return `this.${name}`;
         }
 
-        /* Special helper for submit-handlers */
         if (this.currentEvent?.type === 'submit' && name === 'mavalues') {
             return 'Object.fromEntries(new FormData(event.target).entries())';
         }
 
-        /* Fallback: plain variable */
+        // In component mode, access state through $$state
+        if (this.target === 'component' && this.scopeStack[0]?.has(name)) {
+            return `$$state.${name}`;
+        }
+
         return name;
     }
 

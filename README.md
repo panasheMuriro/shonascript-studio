@@ -9,6 +9,8 @@ This is a complete Integrated Development Environment (IDE) built to run entirel
 
 
 ![Shonascript Studio Screenshot](/src/assets/screenshot.png)
+
+![Shonascript Studio Screenshot](/src/assets/screenshot3.png)
 ---
 
 ## What is Shonascript?

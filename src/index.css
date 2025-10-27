@@ -541,3 +541,224 @@
 .no-file-selected button:hover {
   background: #005a9e;
 }
+
+
+
+/* Add to your styles */
+
+.file-manager {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+.file-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+}
+
+.file-manager-header h3 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.file-manager-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.file-manager-actions button {
+  background: none;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.file-manager-actions button:hover {
+  background: #2d2d2d;
+  color: #d4d4d4;
+}
+
+.file-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.file-tree-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.file-tree-item:hover {
+  background: #2d2d2d;
+}
+
+.file-tree-item.selected {
+  background: #094771;
+}
+
+.file-tree-item-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.folder-arrow {
+  width: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #858585;
+}
+
+.file-icon {
+  display: flex;
+  align-items: center;
+}
+
+.file-name {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modified-indicator {
+  color: #ffa500;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.file-actions {
+  display: none;
+  gap: 2px;
+  padding-right: 8px;
+}
+
+.file-tree-item.show-actions .file-actions {
+  display: flex;
+}
+
+.file-actions button {
+  background: none;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.file-actions button:hover {
+  background: #3c3c3c;
+  color: #d4d4d4;
+}
+
+.rename-input {
+  flex: 1;
+  background: #3c3c3c;
+  border: 1px solid #007acc;
+  color: #d4d4d4;
+  padding: 2px 4px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  border-radius: 2px;
+}
+
+.file-tree-children {
+  position: relative;
+}
+
+
+
+/* Add to your main CSS file (e.g., ShonaxEditor.css) */
+
+.editor-panel-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.no-file-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #1e1e1e; /* Match your editor's background */
+  color: #888;
+  z-index: 10;
+  gap: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.no-file-overlay .create-file-btn {
+  background-color: #007acc;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.no-file-overlay .create-file-btn:hover {
+  background-color: #005a9e;
+}
+
+
+/* Add to your main CSS file (e.g., ShonaxEditor.css) */
+
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-content-container {
+  flex-grow: 1; /* Make this container take up all remaining vertical space */
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-panel {
+  width: 100%;
+  height: 100%;
+  overflow: auto; /* Allow scrolling within each panel if needed */
+}
+
+.compiled-code {
+  height: 100%; /* Ensure compiled code div fills its parent panel */
+}
+
+/* Ensure the iframe fills its panel too */
+.preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
