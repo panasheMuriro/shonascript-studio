@@ -246,6 +246,8 @@ htmlTextContentNotKeyword
     | LBRACKET 
     | RBRACKET
     | EQ 
+    | GT           // Add this
+    | LT           // And this for completeness
     | PLUS 
     | MINUS 
     | MUL 
