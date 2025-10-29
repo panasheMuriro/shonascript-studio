@@ -12,7 +12,7 @@ export default class CustomShonascriptxVisitor extends ShonascriptxVisitor {
         this.effects = [];   // collected effect functions
         this.effectCounter = 0;
 
-        this.hoistedVars = new Set(); 
+        this.hoistedVars = new Set();
 
         this.textNodeCounter = 0;
         this.componentImports = new Map();
@@ -548,8 +548,8 @@ function $$detachListeners(node) {
                 ? this.computedCode.map(line => '        ' + line).join('\n')
                 : '';
 
-                const hoistedDecls =
-    [...this.hoistedVars].map(n => `let ${n};`).join('\n    ');
+            const hoistedDecls =
+                [...this.hoistedVars].map(n => `let ${n};`).join('\n    ');
 
             return `${importStatements}${helpers}
 
@@ -1256,260 +1256,260 @@ ${mountCodeStr}
         return '';
     }
 
-_visitAttributeWithTracking(ctx, elName) {
-    const attrName = this._getAttributeName(ctx);  // Changed from ctx.attrName ? ctx.attrName().getText() : ''
-    const result = { mount: '', update: null, deps: new Set() };
+    _visitAttributeWithTracking(ctx, elName) {
+        const attrName = this._getAttributeName(ctx);  // Changed from ctx.attrName ? ctx.attrName().getText() : ''
+        const result = { mount: '', update: null, deps: new Set() };
 
-    /* ─────────────────────────  EVENTS  ───────────────────────── */
-    const eventMap = {
-        rikabayiwa   : 'click',
-        rikasubmitwa : 'submit',
-        ikanyorwa    : 'input',
-        ikachinjwa   : 'change',
-        ikasarudzwa  : 'change',
-        rikapresswa  : 'keypress',
-        rakapresswa  : 'keypress',
-        rakabayiwa   : 'click'
-    };
+        /* ─────────────────────────  EVENTS  ───────────────────────── */
+        const eventMap = {
+            rikabayiwa: 'click',
+            rikasubmitwa: 'submit',
+            ikanyorwa: 'input',
+            ikachinjwa: 'change',
+            ikasarudzwa: 'change',
+            rikapresswa: 'keypress',
+            rakapresswa: 'keypress',
+            rakabayiwa: 'click'
+        };
 
-    if (eventMap[attrName]) {
-        const jsHandler = this.visit(ctx.shonaExpression());
-        const domEvt    = eventMap[attrName];
-        const clean     = jsHandler.replace(/^\$\$state\./, '');
+        if (eventMap[attrName]) {
+            const jsHandler = this.visit(ctx.shonaExpression());
+            const domEvt = eventMap[attrName];
+            const clean = jsHandler.replace(/^\$\$state\./, '');
 
-        if (attrName === 'ikanyorwa') {
-            result.mount = `$$listen(${elName}, '${domEvt}', e => {
+            if (attrName === 'ikanyorwa') {
+                result.mount = `$$listen(${elName}, '${domEvt}', e => {
                 const zvanyorwa = e.target.value;
                 (${clean})(e);
             });\n`;
-        } else {
-            result.mount = `$$listen(${elName}, '${domEvt}', ${clean});\n`;
+            } else {
+                result.mount = `$$listen(${elName}, '${domEvt}', ${clean});\n`;
+            }
+            return result;
         }
-        return result;
-    }
 
-    /* ───────────────  TWO-WAY <input>  (zvanyorwa)  ────────────── */
-    if (attrName === 'zvanyorwa') {
-        this._startTrackingDeps();
-        const bindExpr = this.visit(ctx.shonaExpression());  // records deps
-        let   deps     = this._finishTrackingDeps();         
+        /* ───────────────  TWO-WAY <input>  (zvanyorwa)  ────────────── */
+        if (attrName === 'zvanyorwa') {
+            this._startTrackingDeps();
+            const bindExpr = this.visit(ctx.shonaExpression());  // records deps
+            let deps = this._finishTrackingDeps();
 
-        /* mount */
-        result.mount = `$$setAttribute(${elName}, 'value', ${bindExpr});\n` +
-                       `$$listen(${elName}, 'input', e => {
+            /* mount */
+            result.mount = `$$setAttribute(${elName}, 'value', ${bindExpr});\n` +
+                `$$listen(${elName}, 'input', e => {
             const zvanyorwa = e.target.value;
             ${bindExpr} = zvanyorwa;
         });\n`;
 
-        /* fallback if tracking missed */
-        if (deps.size === 0) {
-            const m = bindExpr.match(/\$\$state\.([A-Za-z_]\w*)/);
-            if (m) deps = new Set([m[1]]);
+            /* fallback if tracking missed */
+            if (deps.size === 0) {
+                const m = bindExpr.match(/\$\$state\.([A-Za-z_]\w*)/);
+                if (m) deps = new Set([m[1]]);
+            }
+
+            /* update */
+            if (deps.size) {
+                result.update = `$$setAttribute(${elName}, 'value', ${bindExpr});`;
+                result.deps = deps;
+            }
+            return result;
         }
 
-        /* update */
-        if (deps.size) {
-            result.update = `$$setAttribute(${elName}, 'value', ${bindExpr});`;
-            result.deps   = deps;
-        }
-        return result;
-    }
+        /* ───────────────  TWO-WAY <select>  (zvasarudzwa)  ─────────── */
+        if (attrName === 'zvasarudzwa') {
+            this._startTrackingDeps();
+            const bindExpr = this.visit(ctx.shonaExpression());
+            let deps = this._finishTrackingDeps();
 
-    /* ───────────────  TWO-WAY <select>  (zvasarudzwa)  ─────────── */
-    if (attrName === 'zvasarudzwa') {
-        this._startTrackingDeps();
-        const bindExpr = this.visit(ctx.shonaExpression());
-        let   deps     = this._finishTrackingDeps();
-
-        result.mount = `$$setAttribute(${elName}, 'value', ${bindExpr});\n` +
-                       `$$listen(${elName}, 'change', e => {
+            result.mount = `$$setAttribute(${elName}, 'value', ${bindExpr});\n` +
+                `$$listen(${elName}, 'change', e => {
             ${bindExpr} = e.target.value;
         });\n`;
 
-        if (deps.size === 0) {
-            const m = bindExpr.match(/\$\$state\.([A-Za-z_]\w*)/);
-            if (m) deps = new Set([m[1]]);
+            if (deps.size === 0) {
+                const m = bindExpr.match(/\$\$state\.([A-Za-z_]\w*)/);
+                if (m) deps = new Set([m[1]]);
+            }
+
+            if (deps.size) {
+                result.update = `$$setAttribute(${elName}, 'value', ${bindExpr});`;
+                result.deps = deps;
+            }
+            return result;
         }
 
-        if (deps.size) {
-            result.update = `$$setAttribute(${elName}, 'value', ${bindExpr});`;
-            result.deps   = deps;
+        /* ──────────────────────  STATIC ATTR  ─────────────────────── */
+        if (ctx.STRING()) {
+            const real = attrName === 'className' ? 'class' : attrName;
+            const val = ctx.STRING().getText();
+            result.mount = `$$setAttribute(${elName}, '${real}', ${val});\n`;
+            return result;
         }
-        return result;
-    }
 
-    /* ──────────────────────  STATIC ATTR  ─────────────────────── */
-    if (ctx.STRING()) {
+        /* ─────────────────────  DYNAMIC ATTR  ─────────────────────── */
+        this._startTrackingDeps();
+        const value = this.visit(ctx.shonaExpression());
+        const deps = this._finishTrackingDeps();
         const real = attrName === 'className' ? 'class' : attrName;
-        const val  = ctx.STRING().getText();
-        result.mount = `$$setAttribute(${elName}, '${real}', ${val});\n`;
+
+        result.mount = `$$setAttribute(${elName}, '${real}', ${value});\n`;
+        if (deps.size) {
+            result.update = `$$setAttribute(${elName}, '${real}', ${value});`;
+            result.deps = deps;
+        }
         return result;
     }
 
-    /* ─────────────────────  DYNAMIC ATTR  ─────────────────────── */
-    this._startTrackingDeps();
-    const value = this.visit(ctx.shonaExpression());
-    const deps  = this._finishTrackingDeps();
-    const real  = attrName === 'className' ? 'class' : attrName;
+    visitHtmlBlockElement(ctx) {
+        /* ───────────────  bookkeeping  ─────────────── */
+        const elName = `el${this.elementCounter++}`;         // variable that refers to the element
+        const rawTag = ctx.tagName(0).getText();             // exactly as in template
+        const tagName = rawTag.toLowerCase();                 // normalised
+        const key = this._getStableKey(ctx);              // data-k for diff/debug
+        const isCustom = /^[A-Z]/.test(rawTag);               // <MyWidget>
 
-    result.mount = `$$setAttribute(${elName}, '${real}', ${value});\n`;
-    if (deps.size) {
-        result.update = `$$setAttribute(${elName}, '${real}', ${value});`;
-        result.deps   = deps;
-    }
-    return result;
-}
+        /* =======================================================================
+           1.  CUSTOM COMPONENT  (<MyWidget …>)
+           ======================================================================= */
+        if (isCustom) {
+            const kvPairs = [];
 
-visitHtmlBlockElement(ctx) {
-    /* ───────────────  bookkeeping  ─────────────── */
-    const elName  = `el${this.elementCounter++}`;         // variable that refers to the element
-    const rawTag  = ctx.tagName(0).getText();             // exactly as in template
-    const tagName = rawTag.toLowerCase();                 // normalised
-    const key     = this._getStableKey(ctx);              // data-k for diff/debug
-    const isCustom = /^[A-Z]/.test(rawTag);               // <MyWidget>
+            for (const a of ctx.attribute() || []) {
+                const attrKey = a.attrName ? a.attrName().getText()
+                    : a.getChild(0).getText();   // shorthand  {expr}
+                const val = a.STRING() ? a.STRING().getText()
+                    : this.visit(a.shonaExpression());
+                kvPairs.push(`${attrKey}: ${val}`);
+            }
 
-    /* =======================================================================
-       1.  CUSTOM COMPONENT  (<MyWidget …>)
-       ======================================================================= */
-    if (isCustom) {
-        const kvPairs = [];
+            /* optional children → gathered in a temporary array */
+            let childSnippet = '';
+            if (ctx.htmlContent()) {
+                this.parentStack.push(elName);
+                this.tagStack.push(tagName);
 
-        for (const a of ctx.attribute() || []) {
-            const attrKey = a.attrName ? a.attrName().getText()
-                                       : a.getChild(0).getText();   // shorthand  {expr}
-            const val = a.STRING() ? a.STRING().getText()
-                                   : this.visit(a.shonaExpression());
-            kvPairs.push(`${attrKey}: ${val}`);
+                const tmpArr = `_children${this.elementCounter}`;
+                const former = this.parentStack[this.parentStack.length - 1];
+                this.parentStack[this.parentStack.length - 1] = tmpArr;
+
+                const contentCode = this.visit(ctx.htmlContent());
+
+                this.parentStack[this.parentStack.length - 1] = former;
+                this.parentStack.pop();
+                this.tagStack.pop();
+
+                if (contentCode.trim()) {
+                    childSnippet = `const ${tmpArr} = [];\n${contentCode}\n`;
+                    kvPairs.push(`children: ${tmpArr}`);
+                }
+            }
+
+            const ctor = `${rawTag}({ ${kvPairs.join(', ')} })`;
+            const parent = this.parentStack.at(-1);
+
+            let mount = childSnippet;
+            if (parent && parent !== 'root') {
+                mount += `${parent}.appendChild(${ctor});\n`;
+            } else {
+                mount += `const ${elName} = ${ctor};\n`;
+                if (parent === 'root') mount += `root.appendChild(${elName});\n`;
+            }
+
+            if (parent === 'root') this.mountCode.push(mount);
+            return { mount, element: elName };
         }
 
-        /* optional children → gathered in a temporary array */
-        let childSnippet = '';
-        if (ctx.htmlContent()) {
-            this.parentStack.push(elName);
-            this.tagStack.push(tagName);
+        /* =======================================================================
+           2.  NATIVE ELEMENT
+           ======================================================================= */
 
-            const tmpArr = `_children${this.elementCounter}`;
-            const former = this.parentStack[this.parentStack.length - 1];
-            this.parentStack[this.parentStack.length - 1] = tmpArr;
+        /* ---------- 2-a  : hoisting decision -------------------------------- */
+        const attrs = ctx.attribute() || [];
+        let needsHoist = false;
 
-            const contentCode = this.visit(ctx.htmlContent());
-
-            this.parentStack[this.parentStack.length - 1] = former;
-            this.parentStack.pop();
-            this.tagStack.pop();
-
-            if (contentCode.trim()) {
-                childSnippet = `const ${tmpArr} = [];\n${contentCode}\n`;
-                kvPairs.push(`children: ${tmpArr}`);
+        // Any two-way binding attribute forces hoisting immediately
+        for (const a of attrs) {
+            const n = a.attrName ? a.attrName().getText() : '';
+            if (n === 'zvanyorwa' || n === 'zvasarudzwa') {
+                needsHoist = true;
+                this.hoistedVars.add(elName);
+                break;
             }
         }
 
-        const ctor = `${rawTag}({ ${kvPairs.join(', ')} })`;
-        const parent = this.parentStack.at(-1);
+        /* ---------- 2-b : process attributes, gather mount/update code ------ */
+        const attrResults = [];
+        for (const a of attrs) {
+            const res = this._visitAttributeWithTracking(a, elName);
+            attrResults.push(res);
 
-        let mount = childSnippet;
-        if (parent && parent !== 'root') {
-            mount += `${parent}.appendChild(${ctor});\n`;
-        } else {
-            mount += `const ${elName} = ${ctor};\n`;
-            if (parent === 'root') mount += `root.appendChild(${elName});\n`;
+            if (!needsHoist && res.update && res.deps && res.deps.size) {
+                needsHoist = true;
+                this.hoistedVars.add(elName);
+            }
         }
 
+        /* ---------- 2-c : create the element -------------------------------- */
+        let mount = '';
+        mount += needsHoist
+            ? `${elName} = document.createElement('${tagName}');\n`
+            : `const ${elName} = document.createElement('${tagName}');\n`;
+        mount += `${elName}.setAttribute('data-k', '${key}');\n`;
+
+        this.elementRefs.set(elName, { tag: tagName, key });
+
+        /* ---------- 2-d : apply attributes / register update blocks --------- */
+        for (const r of attrResults) {
+            if (r.mount) mount += r.mount;
+            if (r.update && r.deps && r.deps.size)
+                this._registerUpdateBlock(r.update, r.deps);
+        }
+
+        /* ---------- 2-e : auto-id for form fields --------------------------- */
+        if (['input', 'textarea', 'select'].includes(tagName)) {
+            const hasId = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
+            if (!hasId) mount += `${elName}.id = 'input_${this.elementCounter}';\n`;
+        }
+
+        /* ---------- 2-f : children ------------------------------------------ */
+        if (!this.voidTags.has(tagName)) {
+            this.parentStack.push(elName);
+            this.tagStack.push(tagName);
+
+            if (ctx.htmlContent()) {
+                const kids = this.visit(ctx.htmlContent());
+                if (kids.trim()) mount += kids;
+            } else if (tagName === 'option') {
+                const m = ctx.getText().match(/>([\s\S]*?)<\/option/i);
+                const txt = m ? m[1].trim() : '';
+                if (txt) mount += `${elName}.appendChild($$createText(\`${txt.replace(/`/g, '\\`')}\`));\n`;
+            }
+
+            /* <option> default value fallback */
+            if (tagName === 'option') {
+                const hasVal = attrs.some(a => a.attrName && a.attrName().getText() === 'value');
+                if (!hasVal) mount += `if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`;
+            }
+
+            this.parentStack.pop();
+            this.tagStack.pop();
+        }
+
+        /* ---------- 2-g : append to parent ---------------------------------- */
+        const parent = this.parentStack.at(-1);
+        if (tagName === 'style') {
+            mount += `document.head.appendChild(${elName});\n`;
+        } else if (parent === 'root') {
+            mount += `root.appendChild(${elName});\n`;
+        } else if (parent) {
+            mount += `${parent}.appendChild(${elName});\n`;
+        }
+
+        /* ---------- 2-h : store at top-level if root ------------------------- */
         if (parent === 'root') this.mountCode.push(mount);
+
         return { mount, element: elName };
     }
-
-    /* =======================================================================
-       2.  NATIVE ELEMENT
-       ======================================================================= */
-
-    /* ---------- 2-a  : hoisting decision -------------------------------- */
-    const attrs = ctx.attribute() || [];
-    let needsHoist = false;
-
-    // Any two-way binding attribute forces hoisting immediately
-    for (const a of attrs) {
-        const n = a.attrName ? a.attrName().getText() : '';
-        if (n === 'zvanyorwa' || n === 'zvasarudzwa') {
-            needsHoist = true;
-            this.hoistedVars.add(elName);
-            break;
-        }
-    }
-
-    /* ---------- 2-b : process attributes, gather mount/update code ------ */
-    const attrResults = [];
-    for (const a of attrs) {
-        const res = this._visitAttributeWithTracking(a, elName);
-        attrResults.push(res);
-
-        if (!needsHoist && res.update && res.deps && res.deps.size) {
-            needsHoist = true;
-            this.hoistedVars.add(elName);
-        }
-    }
-
-    /* ---------- 2-c : create the element -------------------------------- */
-    let mount = '';
-    mount += needsHoist
-        ? `${elName} = document.createElement('${tagName}');\n`
-        : `const ${elName} = document.createElement('${tagName}');\n`;
-    mount += `${elName}.setAttribute('data-k', '${key}');\n`;
-
-    this.elementRefs.set(elName, { tag: tagName, key });
-
-    /* ---------- 2-d : apply attributes / register update blocks --------- */
-    for (const r of attrResults) {
-        if (r.mount) mount += r.mount;
-        if (r.update && r.deps && r.deps.size)
-            this._registerUpdateBlock(r.update, r.deps);
-    }
-
-    /* ---------- 2-e : auto-id for form fields --------------------------- */
-    if (['input', 'textarea', 'select'].includes(tagName)) {
-        const hasId = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
-        if (!hasId) mount += `${elName}.id = 'input_${this.elementCounter}';\n`;
-    }
-
-    /* ---------- 2-f : children ------------------------------------------ */
-    if (!this.voidTags.has(tagName)) {
-        this.parentStack.push(elName);
-        this.tagStack.push(tagName);
-
-        if (ctx.htmlContent()) {
-            const kids = this.visit(ctx.htmlContent());
-            if (kids.trim()) mount += kids;
-        } else if (tagName === 'option') {
-            const m = ctx.getText().match(/>([\s\S]*?)<\/option/i);
-            const txt = m ? m[1].trim() : '';
-            if (txt) mount += `${elName}.appendChild($$createText(\`${txt.replace(/`/g, '\\`')}\`));\n`;
-        }
-
-        /* <option> default value fallback */
-        if (tagName === 'option') {
-            const hasVal = attrs.some(a => a.attrName && a.attrName().getText() === 'value');
-            if (!hasVal) mount += `if(!${elName}.hasAttribute('value'))${elName}.value=${elName}.textContent;\n`;
-        }
-
-        this.parentStack.pop();
-        this.tagStack.pop();
-    }
-
-    /* ---------- 2-g : append to parent ---------------------------------- */
-    const parent = this.parentStack.at(-1);
-    if (tagName === 'style') {
-        mount += `document.head.appendChild(${elName});\n`;
-    } else if (parent === 'root') {
-        mount += `root.appendChild(${elName});\n`;
-    } else if (parent) {
-        mount += `${parent}.appendChild(${elName});\n`;
-    }
-
-    /* ---------- 2-h : store at top-level if root ------------------------- */
-    if (parent === 'root') this.mountCode.push(mount);
-
-    return { mount, element: elName };
-}
     visitHtmlExpr(ctx) {
         // Only allow in component mode
         if (this.target !== 'component') {
@@ -1571,113 +1571,113 @@ visitHtmlBlockElement(ctx) {
     // }
 
     visitHtmlSelfClosingElement(ctx) {
-    const elName  = `el${this.elementCounter++}`;
-    const rawTag  = ctx.tagName().getText();
-    const tagName = rawTag.toLowerCase();
+        const elName = `el${this.elementCounter++}`;
+        const rawTag = ctx.tagName().getText();
+        const tagName = rawTag.toLowerCase();
 
-    if (tagName === 'style')
-        throw Error('<style> cannot be self-closing – write <style>…</style>.');
+        if (tagName === 'style')
+            throw Error('<style> cannot be self-closing – write <style>…</style>.');
 
-    const key = this._getStableKey(ctx);
-    const isCustom = /^[A-Z]/.test(rawTag);
+        const key = this._getStableKey(ctx);
+        const isCustom = /^[A-Z]/.test(rawTag);
 
-    /* ───────────── custom component (unchanged) ───────────── */
-    if (isCustom) {
-        const kv = [];
-        for (const a of ctx.attribute() || []) {
-            const k = a.attrName ? a.attrName().getText() : a.getChild(0).getText();
-            const v = a.STRING()   ? a.STRING().getText()
-                                   : this.visit(a.shonaExpression());
-            kv.push(`${k}: ${v}`);
+        /* ───────────── custom component (unchanged) ───────────── */
+        if (isCustom) {
+            const kv = [];
+            for (const a of ctx.attribute() || []) {
+                const k = a.attrName ? a.attrName().getText() : a.getChild(0).getText();
+                const v = a.STRING() ? a.STRING().getText()
+                    : this.visit(a.shonaExpression());
+                kv.push(`${k}: ${v}`);
+            }
+            const call = `${rawTag}({ ${kv.join(', ')} })`;
+            const parent = this.parentStack.at(-1);
+            return parent
+                ? `${parent}.appendChild(${call});\n`
+                : `const ${elName} = ${call};\n`;
         }
-        const call   = `${rawTag}({ ${kv.join(', ')} })`;
+
+        /* ───────────── native element ───────────── */
+        const attrs = ctx.attribute() || [];
+        let needsHoist = false;
+
+        /* pre-scan for two-way binding */
+        for (const a of attrs) {
+            const n = a.attrName ? a.attrName().getText() : '';
+            if (n === 'zvanyorwa' || n === 'zvasarudzwa') {
+                needsHoist = true;
+                this.hoistedVars.add(elName);
+                break;
+            }
+        }
+
+        /* handle every attribute with tracking */
+        const attrResults = [];
+        for (const a of attrs) {
+            const r = this._visitAttributeWithTracking(a, elName);
+            attrResults.push(r);
+
+            if (!needsHoist && r.update && r.deps && r.deps.size) {
+                needsHoist = true;
+                this.hoistedVars.add(elName);
+            }
+        }
+
+        /* build mount code */
+        let code = '';
+        code += needsHoist
+            ? `${elName} = document.createElement('${tagName}');\n`
+            : `const ${elName} = document.createElement('${tagName}');\n`;
+        code += `${elName}.setAttribute('data-k', '${key}');\n`;
+
+        for (const r of attrResults) {
+            if (r.mount) code += r.mount;
+            if (r.update && r.deps && r.deps.size)
+                this._registerUpdateBlock(r.update, r.deps);
+        }
+
+        /* auto-id for form controls */
+        if (['input', 'textarea', 'select'].includes(tagName)) {
+            const hasId = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
+            if (!hasId) code += `${elName}.id = 'input_${this.elementCounter}';\n`;
+        }
+
+        /* append to parent */
         const parent = this.parentStack.at(-1);
-        return parent
-            ? `${parent}.appendChild(${call});\n`
-            : `const ${elName} = ${call};\n`;
+        if (parent) code += `${parent}.appendChild(${elName});\n`;
+
+        /* if we’re at root level, push into global mount array */
+        if (parent === 'root') this.mountCode.push(code);
+
+        return code;          // returned string is inserted by caller
     }
 
-    /* ───────────── native element ───────────── */
-    const attrs = ctx.attribute() || [];
-    let needsHoist = false;
+    _getAttributeName(ctx) {
+        if (!ctx.attrName) return '';
 
-    /* pre-scan for two-way binding */
-    for (const a of attrs) {
-        const n = a.attrName ? a.attrName().getText() : '';
-        if (n === 'zvanyorwa' || n === 'zvasarudzwa') {
-            needsHoist = true;
-            this.hoistedVars.add(elName);
-            break;
+        const attrNameCtx = ctx.attrName();
+
+        // Handle special keywords
+        const specialAttrs = ['EVENT_CLICK', 'EVENT_SUBMIT', 'EVENT_CHANGE',
+            'CLASS', 'ZVANYORWA', 'IKANYORWA', 'IKASARUDZWA', 'ZVASARUDZWA'];
+
+        for (const attr of specialAttrs) {
+            if (attrNameCtx[attr] && attrNameCtx[attr]()) {
+                return attrNameCtx[attr]().getText();
+            }
         }
-    }
 
-    /* handle every attribute with tracking */
-    const attrResults = [];
-    for (const a of attrs) {
-        const r = this._visitAttributeWithTracking(a, elName);
-        attrResults.push(r);
-
-        if (!needsHoist && r.update && r.deps && r.deps.size) {
-            needsHoist = true;
-            this.hoistedVars.add(elName);
+        // Handle ID with potential hyphens
+        if (attrNameCtx.ID && attrNameCtx.ID()) {
+            const ids = attrNameCtx.ID();
+            if (Array.isArray(ids)) {
+                return ids.map(id => id.getText()).join('-');
+            }
+            return ids.getText();
         }
+
+        return attrNameCtx.getText();
     }
-
-    /* build mount code */
-    let code = '';
-    code += needsHoist
-        ? `${elName} = document.createElement('${tagName}');\n`
-        : `const ${elName} = document.createElement('${tagName}');\n`;
-    code += `${elName}.setAttribute('data-k', '${key}');\n`;
-
-    for (const r of attrResults) {
-        if (r.mount)  code += r.mount;
-        if (r.update && r.deps && r.deps.size)
-            this._registerUpdateBlock(r.update, r.deps);
-    }
-
-    /* auto-id for form controls */
-    if (['input','textarea','select'].includes(tagName)) {
-        const hasId = attrs.some(a => a.attrName && a.attrName().getText() === 'id');
-        if (!hasId) code += `${elName}.id = 'input_${this.elementCounter}';\n`;
-    }
-
-    /* append to parent */
-    const parent = this.parentStack.at(-1);
-    if (parent) code += `${parent}.appendChild(${elName});\n`;
-
-    /* if we’re at root level, push into global mount array */
-    if (parent === 'root') this.mountCode.push(code);
-
-    return code;          // returned string is inserted by caller
-}
-
-_getAttributeName(ctx) {
-    if (!ctx.attrName) return '';
-    
-    const attrNameCtx = ctx.attrName();
-    
-    // Handle special keywords
-    const specialAttrs = ['EVENT_CLICK', 'EVENT_SUBMIT', 'EVENT_CHANGE', 
-                         'CLASS', 'ZVANYORWA', 'IKANYORWA', 'IKASARUDZWA', 'ZVASARUDZWA'];
-    
-    for (const attr of specialAttrs) {
-        if (attrNameCtx[attr] && attrNameCtx[attr]()) {
-            return attrNameCtx[attr]().getText();
-        }
-    }
-    
-    // Handle ID with potential hyphens
-    if (attrNameCtx.ID && attrNameCtx.ID()) {
-        const ids = attrNameCtx.ID();
-        if (Array.isArray(ids)) {
-            return ids.map(id => id.getText()).join('-');
-        }
-        return ids.getText();
-    }
-    
-    return attrNameCtx.getText();
-}
 
     visitInlineNestedObj(ctx) {
         const objName = ctx.ID().getText();
@@ -1707,7 +1707,7 @@ _getAttributeName(ctx) {
     /** Handle every HTML attribute (events, bindings, …) */
     visitAttribute(ctx, elName) {
         // const attrName = ctx.attrName ? ctx.attrName().getText() : '';
-          const attrName = this._getAttributeName(ctx);  
+        const attrName = this._getAttributeName(ctx);
 
         // EVENT HANDLERS
         const eventMap = {
@@ -1733,8 +1733,8 @@ _getAttributeName(ctx) {
             }
 
             // return `$$listen(${elName}, '${domEvent}', ${jsHandler});\n`;
-        const cleanHandler = jsHandler.replace(/^\$\$state\./, '');
-return `$$listen(${elName}, '${domEvent}', ${cleanHandler});\n`;
+            const cleanHandler = jsHandler.replace(/^\$\$state\./, '');
+            return `$$listen(${elName}, '${domEvent}', ${cleanHandler});\n`;
         }
 
         // TWO-WAY BINDINGS - these now work through reactive setters
@@ -1987,36 +1987,44 @@ Object.defineProperty(_state, '${varName}', {
     }
 
     visitConditionalInHtml(ctx) {
-        const anchorName = `anchor${this.elementCounter++}`;
+        const anchorName = `if_anchor${this.elementCounter++}`;
         const blockName = `if_block${this.elementCounter++}`;
 
         this._startTrackingDeps();
         const condition = this.visit(ctx.expression(0));
         const deps = this._finishTrackingDeps();
 
-        // Mount
-        const mountCode = `
-    const ${anchorName} = document.createComment('if');
-    ${this.parentStack.at(-1)}.appendChild(${anchorName});
-    let ${blockName} = null;
-    `;
+        // Process true branch content
+        const savedParent = this.parentStack.at(-1);
+        this.parentStack.push('fragment');
 
-        this.mountCode.push(mountCode);
+        const trueContent = ctx.htmlContentUntilKeyword(0)
+            ? this.visit(ctx.htmlContentUntilKeyword(0))
+            : '';
 
-        // Update function
-        const dirtyChecks = [...deps].map(d => `$$dirty.${d}`).join(' || ');  // ← Fixed
-
-        // Generate the true branch
-        this.parentStack.push(anchorName + '.parentNode');
-        const trueContent = this.visit(ctx.htmlContentUntilKeyword(0));
         this.parentStack.pop();
 
-        const updateCode = `
-    if (${dirtyChecks}) {
+        // Mount code
+        const mountCode = `
+    const ${anchorName} = document.createComment('if');
+    ${savedParent}.appendChild(${anchorName});
+    let ${blockName} = null;
+    
+    // Initial render
+    if (${condition}) {
+        ${blockName} = document.createDocumentFragment();
+        ${trueContent}
+        ${anchorName}.parentNode.insertBefore(${blockName}, ${anchorName});
+    }`;
+
+        // Register update block if there are dependencies
+        if (deps && deps.size > 0) {
+            const dirtyChecks = [...deps].map(d => `$$dirty.${d}`).join(' || ');
+            const updateCode = `
         if (${condition}) {
             if (!${blockName}) {
                 ${blockName} = document.createDocumentFragment();
-                ${trueContent.mount}
+                ${trueContent}
                 ${anchorName}.parentNode.insertBefore(${blockName}, ${anchorName});
             }
         } else {
@@ -2024,12 +2032,12 @@ Object.defineProperty(_state, '${varName}', {
                 ${blockName}.remove();
                 ${blockName} = null;
             }
+        }`;
+
+            this._registerUpdateBlock(updateCode, deps);
         }
-    }`;
 
-        this._registerUpdateBlock(updateCode, deps);
-
-        return { mount: mountCode };
+        return mountCode;
     }
 
 
@@ -2038,103 +2046,193 @@ Object.defineProperty(_state, '${varName}', {
         return parts.map(part => this.visit(part)).filter(Boolean).join('\n');
     }
 
+    // visitHtmlContentToEnd(ctx) {
+    //     const parts = ctx.htmlContentPart() || [];
+    //     return parts.map(part => this.visit(part)).filter(Boolean).join('\n');
+    // }
+
+
+    // visitHtmlContentPart(ctx) {
+    //     if (ctx.htmlElement && ctx.htmlElement()) {
+    //         return this.visit(ctx.htmlElement());
+    //     }
+    //     if (ctx.shonaExpression && ctx.shonaExpression()) {
+    //         const expr = this.visit(ctx.shonaExpression().expression());
+    //         const parent = this.parentStack.at(-1);
+    //         return `${parent}.appendChild($$createText(${expr}));`;
+    //     }
+    //     if (ctx.htmlTextNotKeyword && ctx.htmlTextNotKeyword()) {
+    //         const start = ctx.htmlTextNotKeyword().start.start;
+    //         const stop = ctx.htmlTextNotKeyword().stop.stop;
+    //         const inputStream = ctx.htmlTextNotKeyword().start.getInputStream();
+    //         const raw = inputStream.getText(start, stop);
+
+    //         const parent = this.parentStack.at(-1);
+    //         const tagName = this.tagStack.at(-1);
+    //         const insideStyle = tagName === 'style';
+
+    //         return this._emitInterpolatedText(raw, parent, insideStyle);
+    //     }
+    //     // Handle nested control flow
+    //     if (ctx.getChildCount() === 1) {
+    //         const child = ctx.getChild(0);
+    //         if (child.getText().startsWith('{')) {
+    //             return this.visit(child.getChild(1)); // Visit the content inside braces
+    //         }
+    //     }
+    //     return '';
+    // }
+
     visitHtmlContentToEnd(ctx) {
-        const parts = ctx.htmlContentPart() || [];
-        return parts.map(part => this.visit(part)).filter(Boolean).join('\n');
+    const parts = ctx.htmlContentPart() || [];
+    const results = [];
+    
+    for (const part of parts) {
+        const result = this.visit(part);
+        
+        // Extract mount code if result is an object
+        if (result && typeof result === 'object' && result.mount) {
+            results.push(result.mount);
+        } else if (result && typeof result === 'string') {
+            results.push(result);
+        }
     }
+    
+    return results.filter(Boolean).join('\n');
+}
 
-    visitHtmlContentPart(ctx) {
-        if (ctx.htmlElement && ctx.htmlElement()) {
-            return this.visit(ctx.htmlElement());
+visitHtmlContentPart(ctx) {
+    if (ctx.htmlElement && ctx.htmlElement()) {
+        const result = this.visit(ctx.htmlElement());
+        // Extract mount code if it's an object
+        if (result && typeof result === 'object' && result.mount) {
+            return result.mount;
         }
-        if (ctx.shonaExpression && ctx.shonaExpression()) {
-            const expr = this.visit(ctx.shonaExpression().expression());
-            const parent = this.parentStack.at(-1);
-            return `${parent}.appendChild($$createText(${expr}));`;
-        }
-        if (ctx.htmlTextNotKeyword && ctx.htmlTextNotKeyword()) {
-            const start = ctx.htmlTextNotKeyword().start.start;
-            const stop = ctx.htmlTextNotKeyword().stop.stop;
-            const inputStream = ctx.htmlTextNotKeyword().start.getInputStream();
-            const raw = inputStream.getText(start, stop);
+        return result;
+    }
+    
+    if (ctx.shonaExpression && ctx.shonaExpression()) {
+        const expr = this.visit(ctx.shonaExpression().expression());
+        const parent = this.parentStack.at(-1);
+        return `${parent}.appendChild($$createText(${expr}));`;
+    }
+    
+    if (ctx.htmlTextNotKeyword && ctx.htmlTextNotKeyword()) {
+        const start = ctx.htmlTextNotKeyword().start.start;
+        const stop = ctx.htmlTextNotKeyword().stop.stop;
+        const inputStream = ctx.htmlTextNotKeyword().start.getInputStream();
+        const raw = inputStream.getText(start, stop);
 
-            const parent = this.parentStack.at(-1);
-            const tagName = this.tagStack.at(-1);
-            const insideStyle = tagName === 'style';
+        const parent = this.parentStack.at(-1);
+        const tagName = this.tagStack.at(-1);
+        const insideStyle = tagName === 'style';
 
-            return this._emitInterpolatedText(raw, parent, insideStyle);
-        }
-        // Handle nested control flow
-        if (ctx.getChildCount() === 1) {
-            const child = ctx.getChild(0);
-            if (child.getText().startsWith('{')) {
-                return this.visit(child.getChild(1)); // Visit the content inside braces
+        return this._emitInterpolatedText(raw, parent, insideStyle);
+    }
+    
+    // Handle nested control flow
+    if (ctx.getChildCount() === 1) {
+        const child = ctx.getChild(0);
+        if (child.getText().startsWith('{')) {
+            const result = this.visit(child.getChild(1));
+            // Extract mount code if it's an object
+            if (result && typeof result === 'object' && result.mount) {
+                return result.mount;
             }
+            return result;
         }
-        return '';
     }
+    
+    return '';
+}
 
-    visitLoopInHtml(ctx) {
-        const item = ctx.ID().getText();
-        const collectionExpr = this.visit(ctx.expression());
-        const anchorName = `each_anchor${this.elementCounter++}`;
-        const blocksName = `each_blocks${this.elementCounter++}`;
+visitLoopInHtml(ctx) {
+    const item = ctx.ID().getText();
+    const collectionExpr = this.visit(ctx.primaryExpression());
+    const anchorName = `each_anchor${this.elementCounter++}`;
+    const blocksName = `each_blocks${this.elementCounter++}`;
 
-        this._startTrackingDeps();
-        ctx.expression().accept(this);
-        const deps = this._finishTrackingDeps();
+    this._startTrackingDeps();
+    ctx.primaryExpression().accept(this);
+    const deps = this._finishTrackingDeps();
 
-        // Mount
-        const mountCode = `
+    // Generate unique function name
+    const createItemFnName = `_create_${blocksName}_item`;
+
+    // Process the content inside the loop
+    this.enterScope();
+    this.declare(item);
+    
+    // Temporarily change parent to track loop body
+    const savedParent = this.parentStack.at(-1);
+    this.parentStack.push('fragment');
+    
+    // Visit the content and collect mount code
+    const contentResult = this.visit(ctx.htmlContentToEnd());
+    
+    // Extract mount code if it's an object
+    let itemContent = '';
+    if (typeof contentResult === 'object' && contentResult.mount) {
+        itemContent = contentResult.mount;
+    } else if (typeof contentResult === 'string') {
+        itemContent = contentResult;
+    }
+    
+    this.parentStack.pop();
+    this.leaveScope();
+
+    // Mount code - create anchor and blocks array
+    const mountCode = `
     const ${anchorName} = document.createComment('each');
-    ${this.parentStack.at(-1)}.appendChild(${anchorName});
+    ${savedParent}.appendChild(${anchorName});
     const ${blocksName} = [];
-    `;
-
-        this.mountCode.push(mountCode);
-
-        // Generate item template function
-        this.parentStack.push('fragment');
-        const itemContent = this.visit(ctx.htmlContentToEnd());
-        this.parentStack.pop();
-
-        const createItemFn = `
-    function _create_${blocksName}_item(${item}) {
+    
+    // Create item function
+    function ${createItemFnName}(${item}) {
         const fragment = document.createDocumentFragment();
-        ${itemContent.mount}
+        ${itemContent}
         return fragment;
-    }`;
-
-        this.mountCode.push(createItemFn);
-
-        // Update function
-        const dirtyChecks = [...deps].map(d => `$$dirty.${d}`).join(' || ');  // ← Fixed
-        const updateCode = `
-    if (${dirtyChecks}) {
-        const items = ${collectionExpr};
-        
-        // Remove excess blocks
-        while (${blocksName}.length > items.length) {
-            ${blocksName}.pop().remove();
-        }
-        
-        // Update/create blocks
-        items.forEach((${item}, i) => {
-            if (i >= ${blocksName}.length) {
-                const block = _create_${blocksName}_item(${item});
-                ${blocksName}.push(block);
-                ${anchorName}.parentNode.insertBefore(block, ${anchorName});
-            }
-        });
-    }`;
-
-        this._registerUpdateBlock(updateCode, deps);
-
-        return { mount: mountCode };
     }
+    
+    // Initial render
+    const _items_init = ${collectionExpr};
+    for (const ${item} of _items_init) {
+        const block = ${createItemFnName}(${item});
+        ${blocksName}.push(block);
+        ${anchorName}.parentNode.insertBefore(block, ${anchorName});
+    }`;
+
+    // If there are dependencies, create an update block
+    if (deps && deps.size > 0) {
+        const dirtyChecks = [...deps].map(d => `$$dirty.${d}`).join(' || ');
+        const updateCode = `
+        // Remove all existing blocks
+        ${blocksName}.forEach(block => block.remove ? block.remove() : 
+            (block.parentNode && block.parentNode.removeChild(block)));
+        ${blocksName}.length = 0;
+        
+        // Re-render with new data
+        const items = ${collectionExpr};
+        for (const ${item} of items) {
+            const block = ${createItemFnName}(${item});
+            ${blocksName}.push(block);
+            ${anchorName}.parentNode.insertBefore(block, ${anchorName});
+        }`;
+        
+        this._registerUpdateBlock(updateCode, deps);
+    }
+
+    return mountCode;
+}
 
     visitWhileInHtml(ctx) {
+        const anchorName = `while_anchor${this.elementCounter++}`;
+        const blockName = `while_block${this.elementCounter++}`;
+
+        this._startTrackingDeps();
         const condition = this.visit(ctx.expression());
+        const deps = this._finishTrackingDeps();
+
         const cleanCondition = condition.startsWith('(') && condition.endsWith(')')
             ? condition.slice(1, -1)
             : condition;
@@ -2142,21 +2240,56 @@ Object.defineProperty(_state, '${varName}', {
         this.loopDepth++;
         this.enterScope();
 
-        let code = `while (${cleanCondition}) {\n`;
+        // Process the content
+        const savedParent = this.parentStack.at(-1);
+        this.parentStack.push('fragment');
 
-        // Visit htmlContentToEnd instead of htmlSuite
-        if (ctx.htmlContentToEnd && ctx.htmlContentToEnd()) {
-            code += this.visit(ctx.htmlContentToEnd());
-        }
+        const content = ctx.htmlContentToEnd()
+            ? this.visit(ctx.htmlContentToEnd())
+            : '';
 
-        code += this.getIndent() + "}";
-
+        this.parentStack.pop();
         this.leaveScope();
         this.loopDepth--;
 
-        return this.removeTrailingCommas(code);
-    }
+        // Mount code
+        const mountCode = `
+    const ${anchorName} = document.createComment('while');
+    ${savedParent}.appendChild(${anchorName});
+    let ${blockName} = document.createDocumentFragment();
+    
+    // Initial render
+    while (${cleanCondition}) {
+        ${content}
+        ${anchorName}.parentNode.insertBefore(${blockName}, ${anchorName});
+        ${blockName} = document.createDocumentFragment();
+    }`;
 
+        // Register update if there are dependencies
+        if (deps && deps.size > 0) {
+            const dirtyChecks = [...deps].map(d => `$$dirty.${d}`).join(' || ');
+            const updateCode = `
+        // Clear existing content
+        let next = ${anchorName}.previousSibling;
+        while (next && next !== ${anchorName}) {
+            const toRemove = next;
+            next = next.previousSibling;
+            toRemove.remove();
+        }
+        
+        // Re-render
+        let ${blockName} = document.createDocumentFragment();
+        while (${cleanCondition}) {
+            ${content}
+            ${anchorName}.parentNode.insertBefore(${blockName}, ${anchorName});
+            ${blockName} = document.createDocumentFragment();
+        }`;
+
+            this._registerUpdateBlock(updateCode, deps);
+        }
+
+        return mountCode;
+    }
     visitHtmlSuite(ctx) {
         if (ctx.htmlContent && ctx.htmlContent()) {
             return this.visit(ctx.htmlContent());
@@ -2860,15 +2993,16 @@ ${this.getIndent()}    .catch(err => { console.error('Kukanganisa paku tambira d
     // }
 
     visitUnaryExpression(ctx) {
-    // no operator  → just recurse
-    if (ctx.getChildCount() === 1) {
-        return this.visit(ctx.getChild(0));
-    }
+        // no operator  → just recurse
+        if (ctx.getChildCount() === 1) {
+            return this.visit(ctx.getChild(0));
+        }
 
-    // operator + operand
-    const op   = ctx.getChild(0).getText();   //  '!', '+', '-'
-    const expr = this.visit(ctx.getChild(1)); //  the real sub-expression
-    return `${op}${expr}`;}
+        // operator + operand
+        const op = ctx.getChild(0).getText();   //  '!', '+', '-'
+        const expr = this.visit(ctx.getChild(1)); //  the real sub-expression
+        return `${op}${expr}`;
+    }
 
     visitUnaryOp(ctx) {
         const op = ctx.getChild(0).getText();
