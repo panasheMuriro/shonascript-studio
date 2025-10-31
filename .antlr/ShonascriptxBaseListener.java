@@ -76,6 +76,18 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterHomweDeclaration(ShonascriptxParser.HomweDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitHomweDeclaration(ShonascriptxParser.HomweDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterReactiveOneLiner(ShonascriptxParser.ReactiveOneLinerContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -820,6 +832,30 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterDefaultAndNamedImport(ShonascriptxParser.DefaultAndNamedImportContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitDefaultAndNamedImport(ShonascriptxParser.DefaultAndNamedImportContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterNamedOnlyImport(ShonascriptxParser.NamedOnlyImportContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitNamedOnlyImport(ShonascriptxParser.NamedOnlyImportContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterIdList(ShonascriptxParser.IdListContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -1348,6 +1384,18 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterArrowFuncMultiParam(ShonascriptxParser.ArrowFuncMultiParamContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitArrowFuncMultiParam(ShonascriptxParser.ArrowFuncMultiParamContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterArrayLiteral(ShonascriptxParser.ArrayLiteralContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -1384,18 +1432,6 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterPropertyAccess(ShonascriptxParser.PropertyAccessContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitPropertyAccess(ShonascriptxParser.PropertyAccessContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
 	@Override public void enterNounClassInequality(ShonascriptxParser.NounClassInequalityContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -1403,18 +1439,6 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitNounClassInequality(ShonascriptxParser.NounClassInequalityContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void enterTimeoutExpr(ShonascriptxParser.TimeoutExprContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitTimeoutExpr(ShonascriptxParser.TimeoutExprContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -1636,6 +1660,18 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterArrowFuncSingleParam(ShonascriptxParser.ArrowFuncSingleParamContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitArrowFuncSingleParam(ShonascriptxParser.ArrowFuncSingleParamContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterFunctionCall(ShonascriptxParser.FunctionCallContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -1679,18 +1715,6 @@ public class ShonascriptxBaseListener implements ShonascriptxListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitNounClassNonExistence(ShonascriptxParser.NounClassNonExistenceContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void enterIntervalExpr(ShonascriptxParser.IntervalExprContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitIntervalExpr(ShonascriptxParser.IntervalExprContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

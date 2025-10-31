@@ -3834,6 +3834,8 @@ public class ShonascriptxParser extends Parser {
 		public TerminalNode LBRACKET() { return getToken(ShonascriptxParser.LBRACKET, 0); }
 		public TerminalNode RBRACKET() { return getToken(ShonascriptxParser.RBRACKET, 0); }
 		public TerminalNode EQ() { return getToken(ShonascriptxParser.EQ, 0); }
+		public TerminalNode GT() { return getToken(ShonascriptxParser.GT, 0); }
+		public TerminalNode LT() { return getToken(ShonascriptxParser.LT, 0); }
 		public TerminalNode PLUS() { return getToken(ShonascriptxParser.PLUS, 0); }
 		public TerminalNode MINUS() { return getToken(ShonascriptxParser.MINUS, 0); }
 		public TerminalNode MUL() { return getToken(ShonascriptxParser.MUL, 0); }
@@ -3864,7 +3866,7 @@ public class ShonascriptxParser extends Parser {
 			{
 			setState(696);
 			_la = _input.LA(1);
-			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 2151241744892L) != 0) || ((((_la - 70)) & ~0x3f) == 0 && ((1L << (_la - 70)) & 34325131539L) != 0)) ) {
+			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 2151241744892L) != 0) || ((((_la - 70)) & ~0x3f) == 0 && ((1L << (_la - 70)) & 34325134611L) != 0)) ) {
 			_errHandler.recoverInline(this);
 			}
 			else {
@@ -8462,7 +8464,7 @@ public class ShonascriptxParser extends Parser {
 		"\u00b2\u00b4\u00b6\u00b8\u00ba\u00bc\u00be\u00c0\u0000\u0017\u0002\u0000"+
 		"\u000f\u000f\u001b\u001b\u0002\u0000@@YY\u0001\u0000!\"\u0003\u0000\u0001"+
 		"\u0001DEee\u0001\u0000\u0004\b\u0002\u0000PQ`c\u0005\u0000\u000f\u0010"+
-		"  \"$\')FF\u0001\u0000=?\n\u0000\u0002\b\u001d\u001f\"\"$(FGJJNNRY[^`"+
+		"  \"$\')FF\u0001\u0000=?\n\u0000\u0002\b\u001d\u001f\"\"$(FGJJNNPY[^`"+
 		"h\u0004\u0000DEHHPPSS\b\u0000\u0002\b\u001d \")FGJJRY[^`h\u0002\u0000"+
 		"FFNN\u0003\u0000\n\nFFNN\u0002\u0000\"\"FF\u0001\u0000=>\u0001\u0000\'"+
 		"(\u0001\u0000%&\u0002\u0000\r\r\u001d\u001e\u0001\u0000bc\u0002\u0000"+

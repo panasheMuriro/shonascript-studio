@@ -57,6 +57,16 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 */
 	void exitSimpleStatement(ShonascriptxParser.SimpleStatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link ShonascriptxParser#homweDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterHomweDeclaration(ShonascriptxParser.HomweDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ShonascriptxParser#homweDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitHomweDeclaration(ShonascriptxParser.HomweDeclarationContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ShonascriptxParser#reactiveOneLiner}.
 	 * @param ctx the parse tree
 	 */
@@ -733,6 +743,30 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 */
 	void exitImportStatement(ShonascriptxParser.ImportStatementContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code defaultAndNamedImport}
+	 * labeled alternative in {@link ShonascriptxParser#importSpecifier}.
+	 * @param ctx the parse tree
+	 */
+	void enterDefaultAndNamedImport(ShonascriptxParser.DefaultAndNamedImportContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code defaultAndNamedImport}
+	 * labeled alternative in {@link ShonascriptxParser#importSpecifier}.
+	 * @param ctx the parse tree
+	 */
+	void exitDefaultAndNamedImport(ShonascriptxParser.DefaultAndNamedImportContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code namedOnlyImport}
+	 * labeled alternative in {@link ShonascriptxParser#importSpecifier}.
+	 * @param ctx the parse tree
+	 */
+	void enterNamedOnlyImport(ShonascriptxParser.NamedOnlyImportContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code namedOnlyImport}
+	 * labeled alternative in {@link ShonascriptxParser#importSpecifier}.
+	 * @param ctx the parse tree
+	 */
+	void exitNamedOnlyImport(ShonascriptxParser.NamedOnlyImportContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ShonascriptxParser#idList}.
 	 * @param ctx the parse tree
 	 */
@@ -1191,6 +1225,18 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 */
 	void exitNounClassExistence(ShonascriptxParser.NounClassExistenceContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code arrowFuncMultiParam}
+	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterArrowFuncMultiParam(ShonascriptxParser.ArrowFuncMultiParamContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code arrowFuncMultiParam}
+	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitArrowFuncMultiParam(ShonascriptxParser.ArrowFuncMultiParamContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code arrayLiteral}
 	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
 	 * @param ctx the parse tree
@@ -1227,18 +1273,6 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 */
 	void exitInStringOp(ShonascriptxParser.InStringOpContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code propertyAccess}
-	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void enterPropertyAccess(ShonascriptxParser.PropertyAccessContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code propertyAccess}
-	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void exitPropertyAccess(ShonascriptxParser.PropertyAccessContext ctx);
-	/**
 	 * Enter a parse tree produced by the {@code nounClassInequality}
 	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
 	 * @param ctx the parse tree
@@ -1250,18 +1284,6 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitNounClassInequality(ShonascriptxParser.NounClassInequalityContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code timeoutExpr}
-	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void enterTimeoutExpr(ShonascriptxParser.TimeoutExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code timeoutExpr}
-	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void exitTimeoutExpr(ShonascriptxParser.TimeoutExprContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code bracketAccess}
 	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
@@ -1479,6 +1501,18 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 */
 	void exitDomPropertyGet(ShonascriptxParser.DomPropertyGetContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code arrowFuncSingleParam}
+	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterArrowFuncSingleParam(ShonascriptxParser.ArrowFuncSingleParamContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code arrowFuncSingleParam}
+	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitArrowFuncSingleParam(ShonascriptxParser.ArrowFuncSingleParamContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code functionCall}
 	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
 	 * @param ctx the parse tree
@@ -1526,18 +1560,6 @@ public interface ShonascriptxListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitNounClassNonExistence(ShonascriptxParser.NounClassNonExistenceContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code intervalExpr}
-	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void enterIntervalExpr(ShonascriptxParser.IntervalExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code intervalExpr}
-	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void exitIntervalExpr(ShonascriptxParser.IntervalExprContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code setExpr}
 	 * labeled alternative in {@link ShonascriptxParser#primaryExpression}.
